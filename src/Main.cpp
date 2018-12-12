@@ -32,8 +32,8 @@ void setup()
 #ifdef REMOTE_DEBUG
   // Start Telnet server based remote debug
   Debug.begin(HOSTNAME);
-  Debug.setResetCmdEnabled(true); // Enable the reset command
-#endif                            // REMOTE_DEBUG
+  Debug.setResetCmdEnabled(true);
+#endif // REMOTE_DEBUG
 
   setPins(); // Enable pin inputs for reading security sensors
 }
@@ -49,7 +49,6 @@ void loop()
   for (int j = 0; j < pinCount - 1; j++)
   {
     readVal = digitalRead(inputPins[j]);
-    //delay(1);
     switch (inputPins[j])
     {
     case 5: // Front Room Motion (NC)
@@ -57,7 +56,7 @@ void loop()
       {
 #ifdef REMOTE_DEBUG
         rdebugDln("Pin %d is HIGH, circuit is open.", inputPins[j]);
-        rdebugIln("Front room motion detected!");
+        rdebugIln("Front room motion detected.");
 #endif // REMOTE_DEBUG
       }
       break;
@@ -66,7 +65,7 @@ void loop()
       {
 #ifdef REMOTE_DEBUG
         rdebugDln("Pin %d is HIGH, circuit is open.", inputPins[j]);
-        rdebugIln("Front door is open!");
+        rdebugIln("Front door is open.");
 #endif // REMOTE_DEBUG
       }
       break;
@@ -75,7 +74,7 @@ void loop()
       {
 #ifdef REMOTE_DEBUG
         rdebugDln("Pin %d is HIGH, circuit is open.", inputPins[j]);
-        rdebugIln("Den door is open!");
+        rdebugIln("Den door is open.");
 #endif // REMOTE_DEBUG
       }
       break;
@@ -84,7 +83,7 @@ void loop()
       {
 #ifdef REMOTE_DEBUG
         rdebugDln("Pin %d is HIGH, circuit is open.", inputPins[j]);
-        rdebugIln("Patio door is open!");
+        rdebugIln("Patio door is open.");
 #endif // REMOTE_DEBUG
       }
       break;
