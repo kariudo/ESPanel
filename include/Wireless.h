@@ -12,7 +12,7 @@ namespace ESPanel
 {
 inline namespace Wireless
 {
-void wifiStart(const char *hostname, const char *ap_default_ssid, const char *ap_default_psk);
+void wifiStart(const char *hostname, const char *ap_ssid, const char *ap_psk);
 } // namespace Wireless
 } // namespace ESPanel
 

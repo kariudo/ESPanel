@@ -1,14 +1,9 @@
 #include <Arduino.h>
 
 #include "Constants.h"
-#include "RemoteDebug.h"
 #include "Wireless.h"
 #include "LED.h"
 #include "Main.h"
-
-#ifdef REMOTE_DEBUG
-RemoteDebug Debug;
-#endif // REMOTE_DEBUG
 
 using namespace ESPanel;
 
@@ -23,7 +18,7 @@ void setup()
 #endif // DEBUG
 
   // Start WiFi and setup for OTA
-  wifiStart(HOSTNAME, ap_default_ssid, ap_default_ssid);
+  wifiStart(HOSTNAME, ap_default_ssid, ap_default_psk);
 
   // Start OTA server.
   ArduinoOTA.setHostname(HOSTNAME);

@@ -1,5 +1,6 @@
 #ifndef MAIN_H_
 #define MAIN_H_
+
 namespace ESPanel
 {
 #ifdef DEBUG
@@ -8,4 +9,5 @@ void startSerial();
 void setPins();
 void blink(int rate);
 } // namespace ESPanel
+
 #endif // !MAIN_H_

@@ -3,7 +3,7 @@ namespace ESPanel
 {
 inline namespace Wireless
 {
-void wifiStart(const char *hostname, const char *ap_default_ssid, const char *ap_default_psk)
+void wifiStart(const char *hostname, const char *ap_ssid, const char *ap_psk)
 {
     initFS();
     String _hostname = String(hostname);
@@ -94,7 +94,7 @@ void wifiStart(const char *hostname, const char *ap_default_ssid, const char *ap
         // Go into software AP mode.
         WiFi.mode(WIFI_AP);
         delay(10);
-        WiFi.softAP(ap_default_ssid, ap_default_psk);
+        WiFi.softAP(ap_ssid, ap_psk);
 
 #ifdef DEBUG
         Serial.print("IP address: ");
