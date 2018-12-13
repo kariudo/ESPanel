@@ -64,15 +64,15 @@ void loop()
 #endif // REMOTE_DEBUG
       }
       break;
-    case 4: // Family Door
-      if (readVal == HIGH)
-      {
-#ifdef REMOTE_DEBUG
-        rdebugDln("Pin %d is HIGH, circuit is open.", inputPins[j]);
-        rdebugIln("Den door is open.");
-#endif // REMOTE_DEBUG
-      }
-      break;
+//     case 4: // Family Door, doesn't seem to be working, no idea where this actually is
+//       if (readVal == HIGH)
+//       {
+// #ifdef REMOTE_DEBUG
+//         rdebugDln("Pin %d is HIGH, circuit is open.", inputPins[j]);
+//         rdebugIln("Den door is open.");
+// #endif // REMOTE_DEBUG
+//       }
+//       break;
     case 14: // Kitchen Door
       if (readVal == HIGH)
       {
