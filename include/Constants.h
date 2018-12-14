@@ -1,9 +1,11 @@
 #ifndef CONSTANTS_H_
 #define CONSTANTS_H_
 
+#define POLLING_SPEED 1000 // check sensors every second
 #define REMOTE_DEBUG
 //#define DEBUG
 //#define BLINK_READS
+//#define READ_ALL_PINS
 
 #ifdef REMOTE_DEBUG
 #include "RemoteDebug.h"
@@ -37,6 +39,7 @@ const ESPanel::Sensor *AllSensors[] = {
     new ESPanel::Sensor (5, ESPanel::SensorType::Motion, ESPanel::Location::FrontHall), // Front room motion
     new ESPanel::Sensor (12, ESPanel::SensorType::Door, ESPanel::Location::FrontHall), // Front door
     new ESPanel::Sensor (14, ESPanel::SensorType::Door, ESPanel::Location::Patio) // Patio door
+    // Sensor wired for 4, family room door isn't responding so it is not defined here until thats sorted
 };
 
 #endif // !CONSTANTS_H_

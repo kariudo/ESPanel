@@ -35,99 +35,23 @@ void setup()
 
 void loop()
 {
-  static int found;
-  static int readVal;
   // Handle OTA server.
   ArduinoOTA.handle();
-  // Read the pins
-  found = 0;
-  for (int j = 0; j < pinCount - 1; j++)
-  {
-    readVal = digitalRead(inputPins[j]);
-    switch (inputPins[j])
-    {
-    case 5: // Front Room Motion (NC)
-      if (readVal == HIGH)
-      {
-#ifdef REMOTE_DEBUG
-        rdebugDln("Pin %d is HIGH, circuit is open.", inputPins[j]);
-        rdebugIln("Front room motion detected.");
-#endif // REMOTE_DEBUG
-      }
-      break;
-    case 12: // Front Door
-      if (readVal == HIGH)
-      {
-#ifdef REMOTE_DEBUG
-        rdebugDln("Pin %d is HIGH, circuit is open.", inputPins[j]);
-        rdebugIln("Front door is open.");
-#endif // REMOTE_DEBUG
-      }
-      break;
-//     case 4: // Family Door, doesn't seem to be working, no idea where this actually is
-//       if (readVal == HIGH)
-//       {
-// #ifdef REMOTE_DEBUG
-//         rdebugDln("Pin %d is HIGH, circuit is open.", inputPins[j]);
-//         rdebugIln("Den door is open.");
-// #endif // REMOTE_DEBUG
-//       }
-//       break;
-    case 14: // Kitchen Door
-      if (readVal == HIGH)
-      {
-#ifdef REMOTE_DEBUG
-        rdebugDln("Pin %d is HIGH, circuit is open.", inputPins[j]);
-        rdebugIln("Patio door is open.");
-#endif // REMOTE_DEBUG
-      }
-      break;
-    }
-#ifdef REMOTE_DEBUG
-    rdebugVln("Pin %d is %s.", inputPins[j], readVal == HIGH ? "HIGH" : "LOW");
-#endif // REMOTE_DEBUG
 
-#ifdef DEBUG
-    if (readVal == LOW)
-    {
-      if (found == 0)
-      {
-        Serial.println();
-      }
-      Serial.print("Pin ");
-      Serial.print(inputPins[j]);
-      Serial.println(" is pulled LOW.");
-#ifdef BLINK_READS
-      for (int k = 0; k < inputPins[j] - 1; k++)
-      {
-        blink(200);
-      }
-#endif
-#ifdef REMOTE_DEBUG
-      rdebugVln("Pin %d is pulled LOW.", inputPins[j]);
-#endif
-      found++;
-    }
-#endif // DEBUG
-  }
-#ifdef DEBUG
-  if (found == 0)
-  {
-    Serial.print(".");
-  }
-#endif
+#ifdef READ_ALL_PINS
+  readAllPins();
+#endif // READ_ALL_PINS
+
 #ifdef REMOTE_DEBUG
   Debug.handle();
 #endif
-#ifdef BLINK_READS
-  blink(1000);
-#else
-  delay(1000); // yield() if we don't delay, keep those esp juices flowing
-#endif
+
+  LED::blink(int(POLLING_SPEED/2)); // yield() if we don't delay, keep those esp juices flowing
 }
 
 namespace ESPanel
 {
+  inline namespace Setup{
 #ifdef DEBUG
 void startSerial()
 {
@@ -157,4 +81,53 @@ void setPins()
 #endif // DEBUG
   }
 }
+
+#ifdef READ_ALL_PINS
+void readAllPins()
+{
+  int found;
+  int readVal;
+
+  // Read the pins
+  found = 0;
+  for (int j = 0; j < pinCount - 1; j++)
+  {
+    readVal = digitalRead(inputPins[j]);
+
+#ifdef REMOTE_DEBUG
+    rdebugVln("Pin %d is %s.", inputPins[j], readVal == HIGH ? "HIGH" : "LOW");
+#endif // REMOTE_DEBUG
+
+#ifdef DEBUG
+    if (readVal == LOW)
+    {
+      if (found == 0)
+      {
+        Serial.println();
+      }
+      Serial.print("Pin ");
+      Serial.print(inputPins[j]);
+      Serial.println(" is pulled LOW.");
+#ifdef BLINK_READS
+      for (int k = 0; k < inputPins[j] - 1; k++)
+      {
+        blink(200);
+      }
+#endif
+#ifdef REMOTE_DEBUG
+      rdebugVln("Pin %d is pulled LOW.", inputPins[j]);
+#endif
+      found++;
+    }
+#endif // DEBUG
+  }    // END pin loop
+#ifdef DEBUG
+  if (found == 0)
+  {
+    Serial.print(".");
+  }
+#endif
+}
+#endif // READ_ALL_PINS
+  }
 } // namespace ESPanel
