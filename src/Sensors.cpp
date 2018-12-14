@@ -30,7 +30,7 @@ const char *SensorStateFalseDescs[] = {
     "closed",
     "not detected"};
 
-Sensor::Sensor() : pin(0), location(Location::FrontHall), type(SensorType::Generic), state(false) {}
+Sensor::Sensor() : pin(0), type(SensorType::Generic), location(Location::FrontHall), state(false) {}
 
 Sensor::Sensor(int pin, SensorType type, Location location) : pin(pin), type(type), location(location), state(false)
 {

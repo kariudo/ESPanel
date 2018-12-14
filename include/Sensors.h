@@ -31,9 +31,9 @@ enum class Location
 class Sensor
 {
 protected:
+  int pin;
   const SensorType type;
   const Location location;
-  int pin;
   bool state;
 
 public:
