@@ -90,8 +90,8 @@ void loop()
   // Loop the sensors
   for (int i = 0; i < SENSOR_COUNT; i++)
   {
-    //SensorList[i]->updateState(true); // todo: update state should get replace with a pin reading function
-    rdebugVln("%s", SensorList[i]->stateMessage());
+    SensorList[i]->updateState();
+//    rdebugVln("%s", SensorList[i]->stateMessage());
   }
 
 #ifdef READ_ALL_PINS
