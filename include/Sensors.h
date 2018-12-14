@@ -19,20 +19,27 @@ enum class SensorType
   Motion
 };
 
+enum class Location
+{
+  Unknown = 0,
+  FrontHall,
+  Patio
+};
+
 // Sensor - Describes a sensor connected to the panel.
 // Provides methods of updating and reading the state of the sensor.
 class Sensor
 {
 protected:
-  const SensorType type = SensorType::Generic;
+  const SensorType type;
+  const Location location;
+  const int pin;
   bool state;
-  int pin;
 
 public:
   Sensor();
-  Sensor(int pin);
-  Sensor(int pin, SensorType type);
-  Sensor(int pin, SensorType type, bool initialState);
+  Sensor(int pin, SensorType type, Location location);
+  Sensor(int pin, SensorType type, Location location, bool initialState);
   // updateState - Set the current known state of a sensor, return True if the state changed.
   const bool updateState(const bool currentState);
   // getState - Return the current state of the sensor.

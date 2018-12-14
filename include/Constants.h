@@ -34,9 +34,9 @@ const int pinCount = sizeof(inputPins) / sizeof(int);
 
 // Configure up to 7 sensors, one for each pin max
 const ESPanel::Sensor *AllSensors[] = {
-    new ESPanel::Sensor (5, ESPanel::SensorType::Motion), // Front room motion
-    new ESPanel::Sensor (12, ESPanel::SensorType::Door), // Front door
-    new ESPanel::Sensor (14, ESPanel::SensorType::Door), // Patio door
-}
+    new ESPanel::Sensor (5, ESPanel::SensorType::Motion, ESPanel::Location::FrontHall), // Front room motion
+    new ESPanel::Sensor (12, ESPanel::SensorType::Door, ESPanel::Location::FrontHall), // Front door
+    new ESPanel::Sensor (14, ESPanel::SensorType::Door, ESPanel::Location::Patio) // Patio door
+};
 
 #endif // !CONSTANTS_H_

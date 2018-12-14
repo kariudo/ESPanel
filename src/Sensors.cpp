@@ -7,34 +7,34 @@ namespace ESPanel
 inline namespace Sensors
 {
 
+const char *LocationNames[] = {
+    "unknown",
+    "front hall",
+    "patio"};
+
 const char *SensorTypeNouns[] = {
-  "sensor",
-  "door",
-  "window",
-  "motion"
-};
+    "sensor",
+    "door",
+    "window",
+    "motion"};
 
 const char *SensorStateTrueDescs[] = {
-  "active",
-  "open",
-  "open",
-  "detected"
-};
+    "active",
+    "open",
+    "open",
+    "detected"};
 
 const char *SensorStateFalseDescs[] = {
-  "inactive",
-  "closed",
-  "closed",
-  "not detected"
-};
+    "inactive",
+    "closed",
+    "closed",
+    "not detected"};
 
-Sensor::Sensor() : pin(0), type(SensorType::Generic), state(false) {}
+Sensor::Sensor() : pin(0), location(Location::FrontHall), type(SensorType::Generic), state(false) {}
 
-Sensor::Sensor(int pin, SensorType type) : pin(pin), type(type), state(false) {}
+Sensor::Sensor(int pin, SensorType type, Location location) : pin(pin), type(type), location(location), state(false) {}
 
-Sensor::Sensor(int pin, SensorType type) : pin(pin), type(type), state(false) {}
-
-Sensor::Sensor(int pin, SensorType type, bool initialState) : pin(pin), type(type), state(initialState) {}
+Sensor::Sensor(int pin, SensorType type, Location location, bool initialState) : pin(pin), type(type), location(location), state(initialState) {}
 
 const bool Sensor::getState()
 {
@@ -55,9 +55,11 @@ const bool Sensor::updateState(const bool currentState)
 const char *Sensor::stateMessage()
 {
     char *out;
-    if ((out = (char *)malloc(strlen(SensorTypeNouns[int(type)]) + (state ? strlen(SensorStateTrueDescs[int(type)]) : strlen(SensorStateFalseDescs[int(type)])) + 5)) != NULL)
+    if ((out = (char *)malloc(strlen(LocationNames[int(location)]) + strlen(SensorTypeNouns[int(type)]) + (state ? strlen(SensorStateTrueDescs[int(type)]) : strlen(SensorStateFalseDescs[int(type)])) + 6)) != NULL)
     {
-        strcpy(out, SensorTypeNouns[int(type)]);
+        strcpy(out, LocationNames[int(location)]);
+        strcat(out, " ");
+        strcat(out, SensorTypeNouns[int(type)]);
         strcat(out, " is ");
         strcat(out, (state ? SensorStateTrueDescs[int(type)] : SensorStateFalseDescs[int(type)]));
         return out;
