@@ -1,9 +1,58 @@
 #include <Arduino.h>
 
-#include "Constants.h"
+#include "Config.h"
 #include "Wireless.h"
 #include "LED.h"
 #include "Main.h"
+#include "Sensors.h"
+
+#pragma region CONFIG
+
+#define POLLING_SPEED 1000 // check sensors every second
+#define REMOTE_DEBUG
+//#define DEBUG
+//#define BLINK_READS
+//#define READ_ALL_PINS
+
+#ifdef REMOTE_DEBUG
+#include "RemoteDebug.h"
+RemoteDebug Debug;
+#endif // REMOTE_DEBUG
+
+const char *HOSTNAME = "ESPanel";
+const char *ap_default_ssid = "ESPanelSetup"; ///< Default SSID.
+const char *ap_default_psk = "";              ///< Default PSK.
+
+const int inputPins[] = {
+    //16, //wake, wants to be low so this wont work to pulldown
+    14, //HSPICLK
+    12, //HSPIQ
+    13, //HSPID & RXD2
+    //  1,  //RXD0 (break serial) Couldn't make this one work even with serial not enabled
+    3, //TXD0 (break serial)
+    5,
+    4,
+    15, // TXD2 & HSPICS, must be low at boot
+        // 2, // LED, must be high at boot
+        // 0 // flash mode, can't be low at boot
+};      //9, 10 are questionable, 1 and 3 also a maybe
+
+const int pinCount = sizeof(inputPins) / sizeof(int);
+
+// Configure up to 7 sensors, one for each pin max
+using ESPanel::Location;
+using ESPanel::Sensor;
+using ESPanel::SensorType;
+
+#define SENSOR_COUNT 3
+static Sensor *SensorList[] = {
+    new MotionSensor(5, Location::FrontHall), // Front room motion
+    new DoorSensor(12, Location::FrontHall), // Front door
+    new DoorSensor(14, Location::Patio),     // Patio door
+    // Sensor wired for 4, family room door isn't responding so it is not defined here until thats sorted
+};
+
+#pragma endregion
 
 using namespace ESPanel;
 
@@ -37,6 +86,12 @@ void loop()
 {
   // Handle OTA server.
   ArduinoOTA.handle();
+
+// Loop the sensors
+for(int i=0; i< SENSOR_COUNT; i++) {
+  //SensorList[i]->updateState(true); // todo: update state should get replace with a pin reading function
+  rdebugVln("%s", SensorList[i]->stateMessage());
+}
 
 #ifdef READ_ALL_PINS
   readAllPins();

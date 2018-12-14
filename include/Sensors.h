@@ -33,12 +33,14 @@ class Sensor
 protected:
   const SensorType type;
   const Location location;
-  const int pin;
+  int pin;
   bool state;
 
 public:
   Sensor();
   Sensor(int pin, SensorType type, Location location);
+#define MotionSensor(pin, location) Sensor(pin, SensorType::Motion, location)
+#define DoorSensor(pin, location) Sensor(pin, SensorType::Door, location)
   Sensor(int pin, SensorType type, Location location, bool initialState);
   // updateState - Set the current known state of a sensor, return True if the state changed.
   const bool updateState(const bool currentState);
