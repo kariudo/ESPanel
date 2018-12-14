@@ -6,11 +6,11 @@
 #include "Main.h"
 #include "Sensors.h"
 
-#pragma region CONFIG
+// CONFIGURATION ============
 
 #define POLLING_SPEED 1000 // check sensors every second
 #define REMOTE_DEBUG
-//#define DEBUG
+//#define DEBUG_OUTPUT
 //#define BLINK_READS
 //#define READ_ALL_PINS
 
@@ -40,31 +40,31 @@ const int inputPins[] = {
 const int pinCount = sizeof(inputPins) / sizeof(int);
 
 // Configure up to 7 sensors, one for each pin max
-using ESPanel::Location;
-using ESPanel::Sensor;
-using ESPanel::SensorType;
+using namespace ESPanel::Sensors;
 
 #define SENSOR_COUNT 3
 static Sensor *SensorList[] = {
     new MotionSensor(5, Location::FrontHall), // Front room motion
-    new DoorSensor(12, Location::FrontHall), // Front door
-    new DoorSensor(14, Location::Patio),     // Patio door
-    // Sensor wired for 4, family room door isn't responding so it is not defined here until thats sorted
+    new DoorSensor(12, Location::FrontHall),  // Front door
+    new DoorSensor(14, Location::Patio),      // Patio door
+                                              // Sensor wired for 4, family room door isn't responding so it is not defined here until thats sorted
 };
 
-#pragma endregion
+// END CONFIGURATION ============
 
-using namespace ESPanel;
+using namespace ESPanel::Setup;
+using namespace ESPanel::Wireless;
+using namespace ESPanel::LED;
 
 void setup()
 {
   // Enable the builtin led for blinking
   pinMode(2, OUTPUT);
 
-#ifdef DEBUG
+#ifdef DEBUG_OUTPUT
   // Start Serial interface
   startSerial();
-#endif // DEBUG
+#endif // DEBUG_OUTPUT
 
   // Start WiFi and setup for OTA
   wifiStart(HOSTNAME, ap_default_ssid, ap_default_psk);
@@ -87,11 +87,12 @@ void loop()
   // Handle OTA server.
   ArduinoOTA.handle();
 
-// Loop the sensors
-for(int i=0; i< SENSOR_COUNT; i++) {
-  //SensorList[i]->updateState(true); // todo: update state should get replace with a pin reading function
-  rdebugVln("%s", SensorList[i]->stateMessage());
-}
+  // Loop the sensors
+  for (int i = 0; i < SENSOR_COUNT; i++)
+  {
+    //SensorList[i]->updateState(true); // todo: update state should get replace with a pin reading function
+    rdebugVln("%s", SensorList[i]->stateMessage());
+  }
 
 #ifdef READ_ALL_PINS
   readAllPins();
@@ -101,13 +102,14 @@ for(int i=0; i< SENSOR_COUNT; i++) {
   Debug.handle();
 #endif
 
-  LED::blink(int(POLLING_SPEED/2)); // yield() if we don't delay, keep those esp juices flowing
+  blink(int(POLLING_SPEED / 2)); // yield() if we don't delay, keep those esp juices flowing
 }
 
 namespace ESPanel
 {
-  inline namespace Setup{
-#ifdef DEBUG
+inline namespace Setup
+{
+#ifdef DEBUG_OUTPUT
 void startSerial()
 {
   Serial.begin(9600);
@@ -121,7 +123,7 @@ void startSerial()
   Serial.print("Chip ID: 0x");
   Serial.println(ESP.getChipId(), HEX);
 }
-#endif // DEBUG
+#endif // DEBUG_OUTPUT
 
 void setPins()
 {
@@ -129,11 +131,11 @@ void setPins()
   for (i = 0; i < pinCount - 1; i++)
   {
     pinMode(inputPins[i], INPUT_PULLUP);
-#ifdef DEBUG
+#ifdef DEBUG_OUTPUT
     Serial.print("Set pin ");
     Serial.print(inputPins[i]);
     Serial.println(" to input");
-#endif // DEBUG
+#endif // DEBUG_OUTPUT
   }
 }
 
@@ -153,7 +155,7 @@ void readAllPins()
     rdebugVln("Pin %d is %s.", inputPins[j], readVal == HIGH ? "HIGH" : "LOW");
 #endif // REMOTE_DEBUG
 
-#ifdef DEBUG
+#ifdef DEBUG_OUTPUT
     if (readVal == LOW)
     {
       if (found == 0)
@@ -174,9 +176,9 @@ void readAllPins()
 #endif
       found++;
     }
-#endif // DEBUG
+#endif // DEBUG_OUTPUT
   }    // END pin loop
-#ifdef DEBUG
+#ifdef DEBUG_OUTPUT
   if (found == 0)
   {
     Serial.print(".");
@@ -184,5 +186,5 @@ void readAllPins()
 #endif
 }
 #endif // READ_ALL_PINS
-  }
+} // namespace Setup
 } // namespace ESPanel

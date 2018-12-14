@@ -9,9 +9,9 @@ void initFS()
   // Initialize file system.
   if (!SPIFFS.begin())
   {
-#ifdef DEBUG
+#ifdef DEBUG_OUTPUT
     Serial.println("Failed to mount file system");
-#endif // DEBUG
+#endif // DEBUG_OUTPUT
     // blink 3 times for a failure warning, then restart
     for (int i = 0; i < 2; i++)
     {
@@ -77,7 +77,7 @@ bool loadConfig(String *ssid, String *pass)
   ssid->trim();
   pass->trim();
 
-#ifdef DEBUG
+#ifdef DEBUG_OUTPUT
   Serial.println("----- file content -----");
   Serial.println(content);
   Serial.println("----- file content -----");

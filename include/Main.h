@@ -5,11 +5,10 @@ namespace ESPanel
 {
 inline namespace Setup
 {
-#ifdef DEBUG
+#ifdef DEBUG_OUTPUT
 void startSerial();
-#endif // DEBUG
+#endif // DEBUG_OUTPUT
 void setPins();
-void blink(int rate);
 void readAllPins();
 } // namespace Setup
 } // namespace ESPanel

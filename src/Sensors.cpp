@@ -32,24 +32,47 @@ const char *SensorStateFalseDescs[] = {
 
 Sensor::Sensor() : pin(0), location(Location::FrontHall), type(SensorType::Generic), state(false) {}
 
-Sensor::Sensor(int pin, SensorType type, Location location) : pin(pin), type(type), location(location), state(false) {}
+Sensor::Sensor(int pin, SensorType type, Location location) : pin(pin), type(type), location(location), state(false)
+{
+    configurePin();
+}
 
-Sensor::Sensor(int pin, SensorType type, Location location, bool initialState) : pin(pin), type(type), location(location), state(initialState) {}
+Sensor::Sensor(int pin, SensorType type, Location location, bool initialState) : pin(pin), type(type), location(location), state(initialState)
+{
+    configurePin();
+}
+
+const bool Sensor::updateState()
+{
+    return setState(digitalRead(pin));
+}
 
 const bool Sensor::getState()
 {
     return state;
 }
 
-const bool Sensor::updateState(const bool currentState)
+const bool Sensor::setState(const bool currentState)
 {
-    bool stateChanged;
     if (state != currentState)
     {
-        stateChanged = true;
+        state = currentState;
+#ifdef REMOTE_DEBUG
+        // If the state has chaned, log it
+        rdebugAln("%s %s is %s",
+                  LocationNames[int(location)],
+                  SensorTypeNouns[int(type)],
+                  (state ? SensorStateTrueDescs[int(type)] : SensorStateFalseDescs[int(type)]));
+#endif // REMOTE_DEBUG
+
+        // todo: add mqtt update here
+        return true;
     }
-    state = currentState;
-    return stateChanged;
+    else
+    {
+        state = currentState;
+        return false;
+    }
 }
 
 const char *Sensor::stateMessage()
@@ -66,14 +89,20 @@ const char *Sensor::stateMessage()
     }
     else
     {
-#ifdef DEBUG
+#ifdef DEBUG_OUTPUT
         Serial.println(ERR_MSG_MEM);
-#endif // DEBUG
+#endif // DEBUG_OUTPUT
 #ifdef REMOTE_DEBUG
         rdebugEln(ERR_MSG_MEM);
 #endif // REMOTE_DEBUG
         return ERR_MSG_MEM;
     }
+}
+
+void Sensor::configurePin()
+{
+    // Set pit to input with internal pullup resistor active
+    pinMode(pin, INPUT_PULLUP);
 }
 
 } // namespace Sensors

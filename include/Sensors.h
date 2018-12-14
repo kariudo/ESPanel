@@ -42,12 +42,17 @@ public:
 #define MotionSensor(pin, location) Sensor(pin, SensorType::Motion, location)
 #define DoorSensor(pin, location) Sensor(pin, SensorType::Door, location)
   Sensor(int pin, SensorType type, Location location, bool initialState);
-  // updateState - Set the current known state of a sensor, return True if the state changed.
-  const bool updateState(const bool currentState);
+  // updateState - Read pin for the current state of the sensor, return true if changed.
+  const bool updateState();
+  // setState - Set the current known state of a sensor, return True if the state changed.
+  const bool setState(const bool currentState);
   // getState - Return the current state of the sensor.
   const bool getState();
   // stateMessage - Return a human readable description of the state of the sensor.
   const char *stateMessage();
+
+private:
+  void configurePin();
 };
 
 } // namespace Sensors
