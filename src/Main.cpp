@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#include "Config.h"
+#include "PubSubClient.h"
 #include "Wireless.h"
 #include "LED.h"
 #include "Main.h"
@@ -19,9 +19,16 @@
 RemoteDebug Debug;
 #endif // REMOTE_DEBUG
 
-const char *HOSTNAME = "ESPanel";
+#define HOSTNAME "ESPanel"
+#define BASE_TOPIC "sensors/" HOSTNAME
+#define WILL_TOPIC BASE_TOPIC "/connected"
+#define MQTT_QOS 1
+
 const char *ap_default_ssid = "ESPanelSetup"; ///< Default SSID.
 const char *ap_default_psk = "";              ///< Default PSK.
+
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
 
 const int inputPins[] = {
     //16, //wake, wants to be low so this wont work to pulldown
@@ -73,6 +80,18 @@ void setup()
   ArduinoOTA.setHostname(HOSTNAME);
   ArduinoOTA.begin();
 
+#define STRINGIZER(arg) #arg
+#define STR_VALUE(arg) STRINGIZER(arg)
+#define MQTT_SERVER STR_VALUE(CONFIG_MQTT_SERVER)
+#define MQTT_PORT CONFIG_MQTT_PORT
+#define MQTT_USER STR_VALUE(CONFIG_MQTT_USER)
+#define MQTT_PASSWORD STR_VALUE(CONFIG_MQTT_PASSWORD)
+#define PAYLOAD_TRUE STR_VALUE(1)
+#define PAYLOAD_FALSE STR_VALUE(0)
+
+  mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
+  mqttClient.setCallback(ESPanel::mqttCallback);
+
 #ifdef REMOTE_DEBUG
   // Start Telnet server based remote debug
   Debug.begin(HOSTNAME);
@@ -90,8 +109,12 @@ void loop()
   // Loop the sensors
   for (int i = 0; i < SENSOR_COUNT; i++)
   {
-    SensorList[i]->updateState();
-//    rdebugVln("%s", SensorList[i]->stateMessage());
+    if (SensorList[i]->updateState()) // If state changed
+    {
+      char topicBuf[50];
+      snprintf(topicBuf, 50, "%s/%s/%s", BASE_TOPIC, SensorList[i]->getLocation(), SensorList[i]->getType());
+      mqttClient.publish(topicBuf, SensorList[i]->getState() ? PAYLOAD_TRUE : PAYLOAD_FALSE);
+    }
   }
 
 #ifdef READ_ALL_PINS
@@ -102,6 +125,12 @@ void loop()
   Debug.handle();
 #endif
 
+  if (!mqttClient.connected())
+  {
+    reconnectMQTT();
+  }
+  mqttClient.loop();
+  rdebugVln(".");
   blink(int(POLLING_SPEED / 2)); // yield() if we don't delay, keep those esp juices flowing
 }
 
@@ -109,6 +138,58 @@ namespace ESPanel
 {
 inline namespace Setup
 {
+
+// todo: move to a better namespace
+void reconnectMQTT()
+{
+  // while (!mqttClient.connected()) // looping here will get us stuck
+  // {
+  Serial.print("Attempting MQTT connection...");
+  // Connect with a will messages
+  if (mqttClient.connect(HOSTNAME, MQTT_USER, MQTT_PASSWORD, WILL_TOPIC, MQTT_QOS, true, PAYLOAD_FALSE))
+  {
+#ifdef DEBUG_OUTPUT
+    Serial.println("MQTT Connected");
+#endif
+#ifdef REMOTE_DEBUG
+    rdebugIln("Posting connected to will topic %s", __TIMESTAMP__, WILL_TOPIC);
+#endif
+
+    // notify connected
+    mqttClient.publish(WILL_TOPIC, PAYLOAD_TRUE, true);
+  }
+  else
+  {
+#ifdef REMOTE_DEBUG
+    rdebugEln("Waiting 5 seconds, failed to connect to MQTT server (%s:%s@%s:%d). Failed.", MQTT_USER, MQTT_PASSWORD, MQTT_SERVER, MQTT_PORT);
+#endif
+#ifdef DEBUG_OUTPUT
+    Serial.print("failed, rc=");
+    Serial.print(mqttClient.state());
+    Serial.println(" will try again...");
+#endif
+    delay(5000);
+  }
+  // }
+}
+
+// todo: relocate to a better place
+void mqttCallback(char *topic, byte *payload, unsigned int length)
+{
+  // todo: handle any subscriptions (possibly to control config)
+#ifdef DEBUG_OUTPUT
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++)
+  {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+#endif // DEBUG_OUTPUT
+  rdebugIln("[Message Received] %s", payload);
+}
+
 #ifdef DEBUG_OUTPUT
 void startSerial()
 {

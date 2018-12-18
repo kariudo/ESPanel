@@ -52,6 +52,16 @@ const bool Sensor::getState()
     return state;
 }
 
+const char *Sensor::getLocation()
+{
+    return LocationNames[int(location)];
+}
+
+const char *Sensor::getType()
+{
+    return SensorTypeNouns[int(type)];
+}
+
 const bool Sensor::setState(const bool currentState)
 {
     if (state != currentState)

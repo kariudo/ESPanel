@@ -50,6 +50,10 @@ public:
   const bool getState();
   // stateMessage - Return a human readable description of the state of the sensor.
   const char *stateMessage();
+  // getLocation - Return the location of the sensor
+  const char *getLocation();
+  // getType - Return the sensor type
+  const char *getType();
 
 private:
   void configurePin();
