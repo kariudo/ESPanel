@@ -35,8 +35,8 @@ const int inputPins[] = {
     14, //HSPICLK
     12, //HSPIQ
     13, //HSPID & RXD2
-    //  1,  //RXD0 (break serial) Couldn't make this one work even with serial not enabled
-    3, //TXD0 (break serial)
+    //  1,  //TXD0 (break serial) Couldn't make this one work even with serial not enabled
+    3, //RXD0 (break serial)
     5,
     4,
     15, // TXD2 & HSPICS, must be low at boot
@@ -49,12 +49,14 @@ const int pinCount = sizeof(inputPins) / sizeof(int);
 // Configure up to 7 sensors, one for each pin max
 using namespace ESPanel::Sensors;
 
-#define SENSOR_COUNT 3
+#define SENSOR_COUNT 5 // WARNING!! WARNING!! UPDATE THIS IF CHANGING THE SENSOR COUNT
 static Sensor *SensorList[] = {
     new MotionSensor(5, Location::FrontHall), // Front room motion
     new DoorSensor(12, Location::FrontHall),  // Front door
     new DoorSensor(14, Location::Patio),      // Patio door
-                                              // Sensor wired for 4, family room door isn't responding so it is not defined here until thats sorted
+    new DoorSensor(4, Location::BackHall),  // Back Hall, needed a 220ohm resistor inline to compensate for some terminating resistor down the line
+    new DoorSensor(13, Location::Basement), // Basement door
+    // Last one that can be used reliably is 3, but it should break serial rx
 };
 
 // END CONFIGURATION ============
@@ -243,9 +245,10 @@ void readAllPins()
       {
         Serial.println();
       }
-      Serial.print("Pin ");
-      Serial.print(inputPins[j]);
-      Serial.println(" is pulled LOW.");
+      // redundant, logged by remote
+      // Serial.print("Pin ");
+      // Serial.print(inputPins[j]);
+      // Serial.println(" is pulled LOW.");
 #ifdef BLINK_READS
       for (int k = 0; k < inputPins[j] - 1; k++)
       {
@@ -253,7 +256,7 @@ void readAllPins()
       }
 #endif
 #ifdef REMOTE_DEBUG
-      rdebugVln("Pin %d is pulled LOW.", inputPins[j]);
+      // rdebugVln("Pin %d is pulled LOW.", inputPins[j]);
 #endif
       found++;
     }

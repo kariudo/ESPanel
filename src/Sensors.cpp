@@ -10,7 +10,9 @@ inline namespace Sensors
 const char *LocationNames[] = {
     "unknown",
     "front hall",
-    "patio"};
+    "patio",
+    "back hall",
+    "basement"};
 
 const char *SensorTypeNouns[] = {
     "sensor",
@@ -67,9 +69,10 @@ const bool Sensor::setState(const bool currentState)
     if (state != currentState)
     {
         state = currentState;
-#ifdef REMOTE_DEBUG
+#ifdef rdebugAln
         // If the state has chaned, log it
-        rdebugAln("%s %s is %s",
+        rdebugAln("(%d) %s %s is %s",
+                  pin,
                   LocationNames[int(location)],
                   SensorTypeNouns[int(type)],
                   (state ? SensorStateTrueDescs[int(type)] : SensorStateFalseDescs[int(type)]));

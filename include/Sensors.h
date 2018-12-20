@@ -23,7 +23,9 @@ enum class Location
 {
   Unknown = 0,
   FrontHall,
-  Patio
+  Patio,
+  BackHall,
+  Basement
 };
 
 // Sensor - Describes a sensor connected to the panel.

@@ -11,6 +11,7 @@ void startSerial();
 void setPins();
 void readAllPins();
 void reconnectMQTT();
+void startSerial();
 void mqttCallback(char *topic, byte *payload, unsigned int length);
 } // namespace Setup
 } // namespace ESPanel
