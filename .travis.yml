@@ -34,10 +34,11 @@ cache:
         - "~/.platformio"
 
 env:
-  - MQTT_SERVER="mqtt.example.com"
-  - MQTT_PORT=5555
-  - MQTT_USER="username"
-  - MQTT_PASSWORD="password"
+  global:
+    - MQTT_SERVER="mqtt.example.com"
+    - MQTT_PORT=5555
+    - MQTT_USER="username"
+    - MQTT_PASSWORD="password"
 
 install:
     - pip install -U platformio
