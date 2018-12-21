@@ -49,14 +49,14 @@ const int pinCount = sizeof(inputPins) / sizeof(int);
 // Configure up to 7 sensors, one for each pin max
 using namespace ESPanel::Sensors;
 
-#define SENSOR_COUNT 5 // WARNING!! WARNING!! UPDATE THIS IF CHANGING THE SENSOR COUNT
+#define SENSOR_COUNT 6 // WARNING!! WARNING!! UPDATE THIS IF CHANGING THE SENSOR COUNT
 static Sensor *SensorList[] = {
     new MotionSensor(5, Location::FrontHall), // Front room motion
     new DoorSensor(12, Location::FrontHall),  // Front door
     new DoorSensor(14, Location::Patio),      // Patio door
     new DoorSensor(4, Location::BackHall),  // Back Hall, needed a 220ohm resistor inline to compensate for some terminating resistor down the line
     new DoorSensor(13, Location::Basement), // Basement door
-    // Last one that can be used reliably is 3, but it should break serial rx
+    new SwitchSensor(3, Location::Basement), // Switch in basement - Last one that can be used reliably is 3, but it should break serial rx
 };
 
 // END CONFIGURATION ============
@@ -67,6 +67,9 @@ using namespace ESPanel::LED;
 
 void setup()
 {
+  // Invert the state of the basement switch
+  SensorList[5]->setInverted();
+
   // Enable the builtin led for blinking
   pinMode(2, OUTPUT);
 
@@ -115,7 +118,7 @@ void loop()
     {
       char topicBuf[50];
       snprintf(topicBuf, 50, "%s/%s/%s", BASE_TOPIC, SensorList[i]->getLocation(), SensorList[i]->getType());
-      mqttClient.publish(topicBuf, SensorList[i]->getState() ? PAYLOAD_TRUE : PAYLOAD_FALSE);
+      mqttClient.publish(topicBuf, SensorList[i]->getState() ? PAYLOAD_TRUE : PAYLOAD_FALSE, true); // publish retained states
     }
   }
 

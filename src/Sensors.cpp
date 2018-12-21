@@ -18,19 +18,22 @@ const char *SensorTypeNouns[] = {
     "sensor",
     "door",
     "window",
-    "motion"};
+    "motion",
+    "switch"};
 
 const char *SensorStateTrueDescs[] = {
     "active",
     "open",
     "open",
-    "detected"};
+    "detected",
+    "on"};
 
 const char *SensorStateFalseDescs[] = {
     "inactive",
     "closed",
     "closed",
-    "not detected"};
+    "not detected",
+    "off"};
 
 Sensor::Sensor() : pin(0), type(SensorType::Generic), location(Location::FrontHall), state(false) {}
 
@@ -51,7 +54,7 @@ const bool Sensor::updateState()
 
 const bool Sensor::getState()
 {
-    return state;
+    return inverted ? !state : state;
 }
 
 const char *Sensor::getLocation()
@@ -116,6 +119,11 @@ void Sensor::configurePin()
 {
     // Set pit to input with internal pullup resistor active
     pinMode(pin, INPUT_PULLUP);
+}
+
+void Sensor::setInverted()
+{
+    inverted = true;
 }
 
 } // namespace Sensors

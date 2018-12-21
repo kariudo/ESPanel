@@ -16,7 +16,8 @@ enum class SensorType
   Generic = 0,
   Door,
   Window,
-  Motion
+  Motion,
+  Switch
 };
 
 enum class Location
@@ -37,12 +38,14 @@ protected:
   const SensorType type;
   const Location location;
   bool state;
+  bool inverted;
 
 public:
   Sensor();
   Sensor(int pin, SensorType type, Location location);
 #define MotionSensor(pin, location) Sensor(pin, SensorType::Motion, location)
 #define DoorSensor(pin, location) Sensor(pin, SensorType::Door, location)
+#define SwitchSensor(pin, location) Sensor(pin, SensorType::Switch, location)
   Sensor(int pin, SensorType type, Location location, bool initialState);
   // updateState - Read pin for the current state of the sensor, return true if changed.
   const bool updateState();
@@ -56,6 +59,8 @@ public:
   const char *getLocation();
   // getType - Return the sensor type
   const char *getType();
+  // setInverted - Invert the logic of the state on read
+  void setInverted();
 
 private:
   void configurePin();
