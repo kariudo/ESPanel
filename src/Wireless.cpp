@@ -1,4 +1,6 @@
 #include "Wireless.h"
+#define REMOTE_DEBUG
+#define DEBUG_OUTPUT
 namespace ESPanel
 {
 inline namespace Wireless
@@ -72,10 +74,6 @@ void wifiStart(const char *hostname, const char *ap_ssid, const char *ap_psk)
         //Serial.print(WiFi.status());
         delay(500);
     }
-
-#ifdef DEBUG_OUTPUT
-    Serial.println();
-#endif // DEBUG_OUTPUT
 
     // Check connection
     if (WiFi.status() == WL_CONNECTED)

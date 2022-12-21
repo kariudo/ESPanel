@@ -2,7 +2,7 @@
 #define FILESYSTEM_H_
 #include <Arduino.h>
 #include <FS.h>
-
+#include "LittleFS.h"
 #include "LED.h"
 
 namespace ESPanel

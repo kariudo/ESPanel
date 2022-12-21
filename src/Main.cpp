@@ -5,12 +5,13 @@
 #include "LED.h"
 #include "Main.h"
 #include "Sensors.h"
+#include "dht.h"
 
 // CONFIGURATION ============
 
 #define POLLING_SPEED 1000 // check sensors every second
 #define REMOTE_DEBUG
-//#define DEBUG_OUTPUT
+#define DEBUG_OUTPUT
 //#define BLINK_READS
 //#define READ_ALL_PINS
 
@@ -24,8 +25,8 @@ RemoteDebug Debug;
 #define WILL_TOPIC BASE_TOPIC "/connected"
 #define MQTT_QOS 1
 
-const char *ap_default_ssid = "ESPanelSetup"; ///< Default SSID.
-const char *ap_default_psk = "";              ///< Default PSK.
+const char *ap_default_ssid = "TerroristSleeperCell"; ///< Default SSID.
+const char *ap_default_psk = "joshhasaids";              ///< Default PSK.
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
@@ -71,11 +72,12 @@ void setup()
   SensorList[5]->setInverted();
 
   // Enable the builtin led for blinking
-  pinMode(2, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
 
 #ifdef DEBUG_OUTPUT
   // Start Serial interface
   startSerial();
+//  delay(2000); // wait for serial
 #endif // DEBUG_OUTPUT
 
   // Start WiFi and setup for OTA
@@ -112,6 +114,7 @@ void loop()
   ArduinoOTA.handle();
 
   // Loop the sensors
+  //Serial.println("Checking for updated sensor states.");
   for (int i = 0; i < SENSOR_COUNT; i++)
   {
     if (SensorList[i]->updateState()) // If state changed
@@ -135,7 +138,11 @@ void loop()
     reconnectMQTT();
   }
   mqttClient.loop();
+
+#ifdef REMOTE_DEBUG
   rdebugVln(".");
+#endif
+
   blink(int(POLLING_SPEED / 2)); // yield() if we don't delay, keep those esp juices flowing
 }
 
@@ -155,6 +162,8 @@ void reconnectMQTT()
   {
 #ifdef DEBUG_OUTPUT
     Serial.println("MQTT Connected");
+    Serial.print("Posting connected to will topic ");
+    Serial.println(WILL_TOPIC);
 #endif
 #ifdef REMOTE_DEBUG
     rdebugIln("Posting connected to will topic %s", __TIMESTAMP__, WILL_TOPIC);
@@ -205,7 +214,6 @@ void startSerial()
   }
   Serial.println();
   Serial.println(); // Get clear of the boot noise
-  Serial.println("\r\n");
   Serial.print("Chip ID: 0x");
   Serial.println(ESP.getChipId(), HEX);
 }
@@ -249,9 +257,9 @@ void readAllPins()
         Serial.println();
       }
       // redundant, logged by remote
-      // Serial.print("Pin ");
-      // Serial.print(inputPins[j]);
-      // Serial.println(" is pulled LOW.");
+      Serial.print("Pin ");
+      Serial.print(inputPins[j]);
+      Serial.println(" is pulled LOW.");
 #ifdef BLINK_READS
       for (int k = 0; k < inputPins[j] - 1; k++)
       {
