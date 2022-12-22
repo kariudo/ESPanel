@@ -7,7 +7,7 @@ inline namespace FileSystem
 void initFS()
 {
   // Initialize file system.
-  if (!SPIFFS.begin())
+  if (!LittleFS.begin())
   {
 #ifdef DEBUG_OUTPUT
     Serial.println("Failed to mount file system");
@@ -33,7 +33,7 @@ void initFS()
 bool loadConfig(String *ssid, String *pass)
 {
   // open file for reading.
-  File configFile = SPIFFS.open("/cl_conf.txt", "r");
+  File configFile = LittleFS.open("/cl_conf.txt", "r");
   if (!configFile)
   {
     Serial.println("Failed to open cl_conf.txt.");
@@ -64,7 +64,7 @@ bool loadConfig(String *ssid, String *pass)
   // If there is no second line: Some information is missing.
   if (pos == -1)
   {
-    Serial.println("Infvalid content.");
+    Serial.println("Invalid content.");
     Serial.println(content);
 
     return false;
@@ -97,7 +97,7 @@ bool loadConfig(String *ssid, String *pass)
 bool saveConfig(String *ssid, String *pass)
 {
   // Open config file for writing.
-  File configFile = SPIFFS.open("/cl_conf.txt", "w");
+  File configFile = LittleFS.open("/cl_conf.txt", "w");
   if (!configFile)
   {
     Serial.println("Failed to open cl_conf.txt for writing");
