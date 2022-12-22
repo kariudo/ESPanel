@@ -9,8 +9,12 @@ void wifiStart(const char *hostname, const char *ap_ssid, const char *ap_psk)
 {
     initFS();
     String _hostname = String(hostname);
-    String station_ssid = "";
-    String station_psk = "";
+    #define STRINGIZER(arg) #arg
+    #define STR_VALUE(arg) STRINGIZER(arg)
+    #define WIFI_SSID STR_VALUE(CONFIG_WIFI_SSID)
+    #define WIFI_PASS STR_VALUE(CONFIG_WIFI_PASS)
+    String station_ssid = WIFI_SSID;
+    String station_psk = WIFI_PASS;
 
     WiFi.hostname(_hostname);
 #ifdef DEBUG_OUTPUT
@@ -74,6 +78,8 @@ void wifiStart(const char *hostname, const char *ap_ssid, const char *ap_psk)
         //Serial.print(WiFi.status());
         delay(500);
     }
+
+    Serial.println(); // Print an empty line to follow up dots once connected.
 
     // Check connection
     if (WiFi.status() == WL_CONNECTED)

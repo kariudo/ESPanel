@@ -6,9 +6,9 @@ inline namespace LED
 {
 void blink(int rate)
 {
-    digitalWrite(2, LOW); //LED ON
+    digitalWrite(D4, LOW); //LED ON
     delay(rate);
-    digitalWrite(2, HIGH); //LED OFF
+    digitalWrite(D4, HIGH); //LED OFF
     delay(rate);
 }
 } // namespace LED

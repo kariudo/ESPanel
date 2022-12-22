@@ -80,7 +80,6 @@ const bool Sensor::setState(const bool currentState)
                   SensorTypeNouns[int(type)],
                   (state ? SensorStateTrueDescs[int(type)] : SensorStateFalseDescs[int(type)]));
 #endif // REMOTE_DEBUG
-
         // todo: add mqtt update here
         return true;
     }
