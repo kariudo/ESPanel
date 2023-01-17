@@ -1,61 +1,47 @@
 #include <Arduino.h>
 
-#include "PubSubClient.h"
 #include "Wireless.h"
 #include "LED.h"
 #include "Main.h"
+#include "MQTT.h"
 #include "Sensors.h"
 #include "DHTesp.h"
 
-// CONFIGURATION ============
-
-#define POLLING_SPEED 1000 // check sensors every second
-#define REMOTE_DEBUG
-#define DEBUG_OUTPUT
-//#define BLINK_READS
-//#define READ_ALL_PINS
+// CONFIGURATION ==========================================
 
 #ifdef REMOTE_DEBUG
 #include "RemoteDebug.h"
 RemoteDebug Debug;
 #endif // REMOTE_DEBUG
 
+// TODO: Perhaps configuration headers that are not .env should be in one header.
 #define HOSTNAME "ESPanel"
-#define BASE_TOPIC "sensors/" HOSTNAME
-#define WILL_TOPIC BASE_TOPIC "/connected"
-#define MQTT_QOS 1
+#define POLLING_SPEED 1000 // check sensors every second
+#define REMOTE_DEBUG
+#define DEBUG_OUTPUT
+//#define READ_ALL_PINS // This is for debug experimentation only.
+//#define BLINK_READS
 
-#define STRINGIZER(arg) #arg
-#define STR_VALUE(arg) STRINGIZER(arg)
-#define MQTT_SERVER STR_VALUE(CONFIG_MQTT_SERVER)
-#define MQTT_PORT CONFIG_MQTT_PORT
-#define MQTT_USER STR_VALUE(CONFIG_MQTT_USER)
-#define MQTT_PASSWORD STR_VALUE(CONFIG_MQTT_PASSWORD)
-#define PAYLOAD_TRUE STR_VALUE(1)
-#define PAYLOAD_FALSE STR_VALUE(0)
-#define TEMPERATURE_TOPIC BASE_TOPIC "/temperature"
-#define HUMIDITY_TOPIC BASE_TOPIC "/humidity"
-
+// WiFi Configuration =====================================
 const char *ap_default_ssid = "ESPanelSetup"; ///< Default SSID.
 const char *ap_default_psk = "";              ///< Default PSK.
 
-WiFiClient espClient;
-PubSubClient mqttClient(espClient);
 DHTesp dht;
 
+// Define pins available for input usage, these will be initialized as input.
 const int inputPins[] = {
-    //16, //wake, wants to be low so this wont work to pulldown
-    14, //HSPICLK
-    12, //HSPIQ
-    13, //HSPID & RXD2
-    //  1,  //TXD0 (break serial) Couldn't make this one work even with serial not enabled
-    3, //RXD0 (break serial)
+    //16,  // wake, wants to be low so this wont work to pulldown
+    14,    // HSPICLK
+    12,    // HSPIQ
+    13,    // HSPID & RXD2
+    //1,   // TXD0 (break serial) Couldn't make this one work even with serial not enabled
+    3,     // RXD0 (break serial)
     5,
     4,
-    15, // TXD2 & HSPICS, must be low at boot
-        // 2, // LED & D4, must be high at boot
-        // 0 // flash mode, can't be low at boot
-};      //9, 10 are questionable, 1 and 3 also a maybe
+    15,    // TXD2 & HSPICS, must be low at boot
+    //2,   // LED & D4, must be high at boot
+    //0    // flash mode, can't be low at boot
+};  //9, 10 are questionable, 1 and 3 also a maybe
 
 const int pinCount = sizeof(inputPins) / sizeof(int);
 
@@ -67,16 +53,17 @@ static Sensor *SensorList[] = {
     new MotionSensor(5, Location::FrontHall), // Front room motion
     new DoorSensor(12, Location::FrontHall),  // Front door
     new DoorSensor(14, Location::Patio),      // Patio door
-    new DoorSensor(4, Location::BackHall),  // Back Hall, needed a 220ohm resistor inline to compensate for some terminating resistor down the line
-    new DoorSensor(13, Location::Basement), // Basement door
-    new SwitchSensor(3, Location::Basement), // Switch in basement - Last one that can be used reliably is 3, but it should break serial rx
+    new DoorSensor(4, Location::BackHall),    // Back Hall, needed a 220ohm resistor inline to compensate for some terminating resistor down the line
+    new DoorSensor(13, Location::Basement),   // Basement door
+    new SwitchSensor(3, Location::Basement),  // Switch in basement - Last one that can be used reliably is 3, but it should break serial rx
 };
 
-// END CONFIGURATION ============
+// END CONFIGURATION ======================================
 
 using namespace ESPanel::Setup;
 using namespace ESPanel::Wireless;
 using namespace ESPanel::LED;
+using namespace ESPanel::MQTT;
 
 void setup()
 {
@@ -89,7 +76,6 @@ void setup()
 #ifdef DEBUG_OUTPUT
   // Start Serial interface
   startSerial();
-//  delay(2000); // wait for serial
 #endif // DEBUG_OUTPUT
 
   // Start WiFi and setup for OTA
@@ -101,7 +87,7 @@ void setup()
 
   // MQTT connection config.
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
-  mqttClient.setCallback(ESPanel::mqttCallback);
+  mqttClient.setCallback(ESPanel::MQTT::mqttCallback);
 
 #ifdef REMOTE_DEBUG
   // Start Telnet server based remote debug
@@ -109,12 +95,13 @@ void setup()
   Debug.setResetCmdEnabled(true);
 #endif // REMOTE_DEBUG
 
-  setPins(); // Enable pin inputs for reading security sensors
+  // Enable pin inputs for reading security sensors
+  setPins();
 
-  // DHT22 configuration.
+  // DHT22 configuration. (Temperature & Humidity)
   dht.setup(D0, DHTesp::DHT22);
 
-  // BLINK!
+  // BLINK! 1 second to show that setup completed.
   blink(1000);
 }
 
@@ -124,8 +111,7 @@ void loop()
   // Handle OTA server.
   ArduinoOTA.handle();
 
-  // Loop the sensors
-  //Serial.println("Checking for updated sensor states.");
+  // Loop the sensors for current state, and publish MQTT values for any with changed states.
   for (int i = 0; i < SENSOR_COUNT; i++)
   {
     if (SensorList[i]->updateState()) // If state changed
@@ -140,9 +126,11 @@ void loop()
   readAllPins();
 #endif // READ_ALL_PINS
 
-  // Evaluate the DHT22.
+  // Evaluate the DHT22. (Only performed after 30 seconds.)
+  // TODO: The Temp & Humidity deltas should be compared to require a minimum diff before publish.
+  // TODO: It might be wise to take a rolling average per second and decide if that value changed enough.
   static unsigned long previousTime = 0;
-  static const int dhtInterval = 10000; // 10 seconds.
+  static const int dhtInterval = 30000; // 30 seconds.
   unsigned long currentMillis = millis();
   if (currentMillis - previousTime >= dhtInterval)
   {
@@ -151,13 +139,14 @@ void loop()
     float temperature = dht.getTemperature();
     if (std::isnan(humidity) || std::isnan(temperature))
     {
-      #ifdef DEBUG_OUTPUT
+#ifdef DEBUG_OUTPUT
       Serial.println("Unable to get readings from DHT22, skipping submission.");
-      #endif
+#endif
     } else {
-      dtostrf(dht.toFahrenheit(temperature), 2,2,buff);
+      // If valid values are read, publish them to MQTT.
+      dtostrf(dht.toFahrenheit(temperature), 2, 2, buff);
       mqttClient.publish(TEMPERATURE_TOPIC, buff, true);
-      dtostrf(humidity, 2,2,buff);
+      dtostrf(humidity, 2, 2, buff);
       mqttClient.publish(HUMIDITY_TOPIC, buff, true);
       previousTime = currentMillis;
     }
@@ -167,9 +156,10 @@ void loop()
   Debug.handle();
 #endif
 
+  // Ensure MQTT connected, and do MQTT work loop.
   if (!mqttClient.connected())
   {
-    reconnectMQTT();
+    ESPanel::MQTT::reconnectMQTT();
   }
   mqttClient.loop();
 
@@ -177,6 +167,7 @@ void loop()
   rdebugVln(".");
 #endif
 
+  // Blink LED to show polling cycle.
   blink(int(POLLING_SPEED / 2)); // yield() if we don't delay, keep those esp juices flowing
 }
 
@@ -184,59 +175,6 @@ namespace ESPanel
 {
 inline namespace Setup
 {
-
-// todo: move to a better namespace
-void reconnectMQTT()
-{
-  // while (!mqttClient.connected()) // looping here will get us stuck
-  // {
-  Serial.print("Attempting MQTT connection...");
-  // Connect with a will messages
-  if (mqttClient.connect(HOSTNAME, MQTT_USER, MQTT_PASSWORD, WILL_TOPIC, MQTT_QOS, true, PAYLOAD_FALSE))
-  {
-#ifdef DEBUG_OUTPUT
-    Serial.println("MQTT Connected");
-    Serial.print("Posting connected to will topic ");
-    Serial.println(WILL_TOPIC);
-#endif
-#ifdef REMOTE_DEBUG
-    rdebugIln("Posting connected to will topic %s", __TIMESTAMP__, WILL_TOPIC);
-#endif
-
-    // notify connected
-    mqttClient.publish(WILL_TOPIC, PAYLOAD_TRUE, true);
-  }
-  else
-  {
-#ifdef REMOTE_DEBUG
-    rdebugEln("Waiting 5 seconds, failed to connect to MQTT server (%s:%s@%s:%d). Failed.", MQTT_USER, MQTT_PASSWORD, MQTT_SERVER, MQTT_PORT);
-#endif
-#ifdef DEBUG_OUTPUT
-    Serial.print("failed, rc=");
-    Serial.print(mqttClient.state());
-    Serial.println(" will try again...");
-#endif
-    delay(5000);
-  }
-  // }
-}
-
-// todo: relocate to a better place
-void mqttCallback(char *topic, byte *payload, unsigned int length)
-{
-  // todo: handle any subscriptions (possibly to control config)
-#ifdef DEBUG_OUTPUT
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  for (int i = 0; i < length; i++)
-  {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
-#endif // DEBUG_OUTPUT
-  rdebugIln("[Message Received] %s", payload);
-}
 
 #ifdef DEBUG_OUTPUT
 void startSerial()
@@ -250,6 +188,7 @@ void startSerial()
   Serial.println(); // Get clear of the boot noise
   Serial.print("Chip ID: 0x");
   Serial.println(ESP.getChipId(), HEX);
+//  delay(2000); // wait for serial
 }
 #endif // DEBUG_OUTPUT
 
@@ -268,6 +207,8 @@ void setPins()
 }
 
 #ifdef READ_ALL_PINS
+// This method is only here for testing and debug purposes. To allow for "feeling out" what pins are available and
+// what devices are connected to what.
 void readAllPins()
 {
   int found;
