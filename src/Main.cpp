@@ -15,7 +15,7 @@ RemoteDebug Debug;
 #endif // REMOTE_DEBUG
 
 // TODO: Perhaps configuration headers that are not .env should be in one header.
-#define HOSTNAME "ESPanel"
+#define HOSTNAME STR_VALUE(CONFIG_HOSTNAME)
 #define POLLING_SPEED 1000 // check sensors every second
 #define REMOTE_DEBUG
 #define DEBUG_OUTPUT

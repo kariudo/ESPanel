@@ -6,7 +6,7 @@
 #include "PubSubClient.h"
 
 // MQTT Configuration =====================================
-#define HOSTNAME "ESPanel"
+#define HOSTNAME STR_VALUE(CONFIG_HOSTNAME)
 #define BASE_TOPIC "sensors/" HOSTNAME
 #define WILL_TOPIC BASE_TOPIC "/connected"
 #define MQTT_QOS 1
@@ -33,8 +33,10 @@ namespace ESPanel
 inline namespace MQTT
 {
 
+// Ensure connection to the MQTT server is active.
 void reconnectMQTT();
 
+// MQTT Callback.
 void mqttCallback(char *topic, byte *payload, unsigned int length);
 
 } // namespace MQTT

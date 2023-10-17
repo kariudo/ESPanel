@@ -8,6 +8,7 @@ Experimental alarm panel integration firmware for the ESP8266 microcontroller.
 Requires an `.env` or other means of setting the following required env vars:
 
 ```conf
+CONFIG_HOSTNAME=ESPanel
 CONFIG_MQTT_SERVER=192.168.1.110
 CONFIG_MQTT_PORT=1883
 CONFIG_MQTT_USER=YourUser

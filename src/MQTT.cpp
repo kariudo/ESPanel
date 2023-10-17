@@ -41,6 +41,7 @@ void reconnectMQTT()
 void mqttCallback(char *topic, byte *payload, unsigned int length)
 {
   // todo: handle any subscriptions (possibly to control config)
+  // todo: valid subscription options would be to read config/control from mqtt topic.
 #ifdef DEBUG_OUTPUT
   Serial.print("Message arrived [");
   Serial.print(topic);
