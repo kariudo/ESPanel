@@ -1,6 +1,0 @@
-[submodule "lib/RemoteDebug"]
-	path = lib/RemoteDebug
-	url = https://github.com/JoaoLopesF/RemoteDebug
-[submodule "lib/pubsubclient"]
-	path = lib/pubsubclient
-	url = https://github.com/knolleary/pubsubclient
