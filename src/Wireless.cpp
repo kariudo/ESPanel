@@ -1,110 +1,99 @@
 #include "Wireless.h"
 #define REMOTE_DEBUG
 #define DEBUG_OUTPUT
-namespace ESPanel
-{
-inline namespace Wireless
-{
-void wifiStart(const char *hostname, const char *ap_ssid, const char *ap_psk)
-{
-    initFS();
-    String _hostname = String(hostname);
-    #define STRINGIZER(arg) #arg
-    #define STR_VALUE(arg) STRINGIZER(arg)
-    #define WIFI_SSID STR_VALUE(CONFIG_WIFI_SSID)
-    #define WIFI_PASS STR_VALUE(CONFIG_WIFI_PASS)
-    String station_ssid = WIFI_SSID;
-    String station_psk = WIFI_PASS;
+namespace ESPanel {
+inline namespace Wireless {
+void wifiStart(const char *hostname, const char *ap_ssid, const char *ap_psk) {
+  initFS();
+  String _hostname = String(hostname);
+#define STRINGIZER(arg) #arg
+#define STR_VALUE(arg) STRINGIZER(arg)
+#define WIFI_SSID STR_VALUE(CONFIG_WIFI_SSID)
+#define WIFI_PASS STR_VALUE(CONFIG_WIFI_PASS)
+  String station_ssid = WIFI_SSID;
+  String station_psk = WIFI_PASS;
 
-    WiFi.hostname(_hostname);
+  WiFi.hostname(_hostname);
 #ifdef DEBUG_OUTPUT
-    Serial.println("Hostname: " + _hostname);
+  Serial.println("Hostname: " + _hostname);
 #endif // DEBUG_OUTPUT
 
-    // Load wifi connection information.
-    if (!loadConfig(&station_ssid, &station_psk))
-    {
-        station_ssid = "";
-        station_psk = "";
+  // Load wifi connection information.
+  if (!loadConfig(&station_ssid, &station_psk)) {
+    station_ssid = "";
+    station_psk = "";
 #ifdef DEBUG_OUTPUT
-        Serial.println("No WiFi connection information available.");
+    Serial.println("No WiFi connection information available.");
 #endif // DEBUG_OUTPUT
-    }
+  }
 
-    // Check WiFi connection
-    // ... check mode
-    if (WiFi.getMode() != WIFI_STA)
-    {
-        WiFi.mode(WIFI_STA);
-        delay(10);
-    }
+  // Check WiFi connection
+  // ... check mode
+  if (WiFi.getMode() != WIFI_STA) {
+    WiFi.mode(WIFI_STA);
+    delay(10);
+  }
 
-    // ... Compare file config with sdk config.
-    if (WiFi.SSID() != station_ssid || WiFi.psk() != station_psk)
-    {
+  // ... Compare file config with sdk config.
+  if (WiFi.SSID() != station_ssid || WiFi.psk() != station_psk) {
 #ifdef DEBUG_OUTPUT
-        Serial.println("WiFi config changed.");
+    Serial.println("WiFi config changed.");
 #endif // DEBUG_OUTPUT
 
-        // ... Try to connect to WiFi station.
-        WiFi.begin(station_ssid.c_str(), station_psk.c_str());
+    // ... Try to connect to WiFi station.
+    WiFi.begin(station_ssid.c_str(), station_psk.c_str());
 
 #ifdef DEBUG_OUTPUT
-        // ... Print new SSID
-        Serial.print("new SSID: ");
-        Serial.println(WiFi.SSID());
-        // ... Uncomment this for debugging output.
-        //WiFi.printDiag(Serial);
+    // ... Print new SSID
+    Serial.print("New SSID: ");
+    Serial.println(WiFi.SSID());
+    Serial.print("New PSK :");
+    Serial.println(WiFi.psk());
+    // ... Uncomment this for debugging output.
+    WiFi.printDiag(Serial);
 #endif // DEBUG_OUTPUT
-    }
-    else
-    {
-        // ... Begin with sdk config.
-        WiFi.begin();
-    }
+  } else {
+    // ... Begin with sdk config.
+    WiFi.begin();
+  }
 
 #ifdef DEBUG_OUTPUT
-    Serial.println("Wait for WiFi connection.");
+  Serial.println("Wait for WiFi connection.");
 #endif // DEBUG_OUTPUT
 
-    // ... Give ESP 10 seconds to connect to station.
-    unsigned long startTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startTime < 10000)
-    {
+  // ... Give ESP 10 seconds to connect to station.
+  unsigned long startTime = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - startTime < 20000) {
 #ifdef DEBUG_OUTPUT
-        Serial.write('.');
+    // Serial.write('.');
+    Serial.print(WiFi.status());
 #endif // DEBUG_OUTPUT
+    delay(500);
+  }
 
-        //Serial.print(WiFi.status());
-        delay(500);
-    }
+  Serial.println(); // Print an empty line to follow up dots once connected.
 
-    Serial.println(); // Print an empty line to follow up dots once connected.
-
-    // Check connection
-    if (WiFi.status() == WL_CONNECTED)
-    {
+  // Check connection
+  if (WiFi.status() == WL_CONNECTED) {
 #ifdef DEBUG_OUTPUT
-        Serial.print("IP address: ");
-        Serial.println(WiFi.localIP());
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
 #endif // DEBUG_OUTPUT
-    }
-    else
-    {
+  } else {
 #ifdef DEBUG_OUTPUT
-        Serial.println("Can not connect to WiFi station. Go into AP mode.");
+    Serial.println("Can not connect to WiFi station. Go into AP mode.");
 #endif // DEBUG_OUTPUT
 
-        // Go into software AP mode.
-        WiFi.mode(WIFI_AP);
-        delay(10);
-        WiFi.softAP(ap_ssid, ap_psk);
+    // Go into software AP mode.
+    WiFi.mode(WIFI_AP);
+    delay(10);
+    WiFi.softAP(ap_ssid, ap_psk);
 
 #ifdef DEBUG_OUTPUT
-        Serial.print("IP address: ");
-        Serial.println(WiFi.softAPIP());
+    Serial.print("IP address: ");
+    Serial.println(WiFi.softAPIP());
 #endif // DEBUG_OUTPUT
-    }
+  }
 }
 } // namespace Wireless
 } // namespace ESPanel
