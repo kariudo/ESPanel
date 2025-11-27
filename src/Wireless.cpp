@@ -65,8 +65,8 @@ void wifiStart(const char *hostname, const char *ap_ssid, const char *ap_psk) {
   unsigned long startTime = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - startTime < 20000) {
 #ifdef DEBUG_OUTPUT
-    // Serial.write('.');
-    Serial.print(WiFi.status());
+    Serial.write('.');
+    // Serial.print(WiFi.status());
 #endif // DEBUG_OUTPUT
     delay(500);
   }

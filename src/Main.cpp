@@ -13,6 +13,8 @@
 #include "WebServer.h"
 #include "Wireless.h"
 
+#include <ArduinoJson.h>
+
 // #define BLINK_READS
 // #define READ_ALL_PINS
 
@@ -133,14 +135,18 @@ void setup() {
 #endif // DEBUG_OUTPUT
   registerRoutes();
 
-  // BLINK!
-  blink(1000);
+// BLINK!
+#ifdef STATUS_BLINK
+  blink(100);
+#endif
 }
 
 void loop() {
   // Handle OTA server.
   ArduinoOTA.handle();
 
+  // Create a JSON document.
+  JsonDocument doc;
   // Loop the sensors
   // Serial.println("Checking for updated sensor states.");
   for (int i = 0; i < SENSOR_COUNT; i++) {
@@ -153,11 +159,20 @@ void loop() {
           topicBuf, SensorList[i]->getState() ? PAYLOAD_TRUE : PAYLOAD_FALSE,
           true); // publish retained states
     }
+    // Add each sensor state to the JSON document.
+    doc["digital"][String(SensorList[i]->getLocation()) + " " +
+                   String(SensorList[i]->getType())] =
+        SensorList[i]->getState();
   }
 
 #ifdef READ_ALL_PINS
   readAllPins();
 #endif // READ_ALL_PINS
+
+  // Write the JSON data.
+  File sensorsFile = LittleFS.open("sensors.json", "w");
+  ArduinoJson::serializeJson(doc, sensorsFile);
+  sensorsFile.close();
 
   // Evaluate the DHT22.
   static unsigned long previousTime = 0;
@@ -167,18 +182,30 @@ void loop() {
     char buff[10];
     float humidity = dht.getHumidity();
     float temperature = dht.getTemperature();
-    if (std::isnan(humidity) || std::isnan(temperature)) {
+    // TODO: Disabled ifelse block for testing since the sensor does not exist
+    // if (std::isnan(humidity) || std::isnan(temperature)) {
 #ifdef DEBUG_OUTPUT
-//      Serial.println("Unable to get readings from DHT22, skipping
-//      submission.");
+    //      Serial.println("Unable to get readings from DHT22, skipping
+    //      submission.");
+    humidity = 99.0;
+    temperature = 99.0;
 #endif
-    } else {
-      dtostrf(dht.toFahrenheit(temperature), 2, 2, buff);
-      mqttClient.publish(TEMPERATURE_TOPIC, buff, true);
-      dtostrf(humidity, 2, 2, buff);
-      mqttClient.publish(HUMIDITY_TOPIC, buff, true);
-      previousTime = currentMillis;
-    }
+    // at the moment } else {
+    dtostrf(dht.toFahrenheit(temperature), 2, 2, buff);
+    doc.clear();
+    doc["temp"] = buff;
+    mqttClient.publish(TEMPERATURE_TOPIC, buff, true);
+    dtostrf(humidity, 2, 2, buff);
+    doc["humidity"] = buff;
+    mqttClient.publish(HUMIDITY_TOPIC, buff, true);
+    previousTime = currentMillis;
+
+    // Write the JSON data.
+    File climateFile = LittleFS.open("climate.json", "w");
+    ArduinoJson::serializeJson(doc, climateFile);
+    climateFile.close();
+    doc.clear();
+    // }
   }
 
 #ifdef REMOTE_DEBUG
@@ -194,8 +221,13 @@ void loop() {
   rdebugVln(".");
 #endif
 
+// BLINK!
+#ifdef STATUS_BLINK
   blink(int(POLLING_SPEED /
             2)); // yield() if we don't delay, keep those esp juices flowing
+#else
+  delay(POLLING_SPEED);
+#endif
 }
 
 namespace ESPanel {

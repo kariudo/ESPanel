@@ -10,6 +10,7 @@
 // #include <ESPAsyncTCP.h>
 // #endif
 
+#include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
 
