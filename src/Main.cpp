@@ -4,6 +4,7 @@
 #endif
 
 #include <Arduino.h>
+#include <ESP8266mDNS.h>
 
 #include "DHTesp.h"
 #include "LED.h"
@@ -95,6 +96,8 @@ using namespace ESPanel::LED;
 using namespace ESPanel::WebServer;
 
 void setup() {
+  blink(1); // Fast blink to ensure LED is not left on.
+
   // Invert the state of the basement switch
   SensorList[5]->setInverted();
 
@@ -220,6 +223,9 @@ void loop() {
 #ifdef REMOTE_DEBUG
   rdebugVln(".");
 #endif
+
+  // Must run each loop to keep mDNS processing.
+  MDNS.update();
 
 // BLINK!
 #ifdef STATUS_BLINK

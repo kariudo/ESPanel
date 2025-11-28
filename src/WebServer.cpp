@@ -16,9 +16,19 @@ void registerRoutes() {
 #ifdef DEBUG_OUTPUT
   Serial.println("Registering routes");
 #endif // DEBUG_OUTPUT
+  // server.serveStatic("/", LittleFS, "/www/index.html");
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *req) {
+    req->send(LittleFS, "/www/index.html");
+  });
+
   server.serveStatic("/index.html", LittleFS, "/www/index.html");
   server.serveStatic("/sensors.json", LittleFS, "/sensors.json");
   server.serveStatic("/climate.json", LittleFS, "/climate.json");
+
+  // Not found
+  server.onNotFound([](AsyncWebServerRequest *request) {
+    request->send(404, "text/plain", "Not found");
+  });
 
   // Define POST route
   server.on(

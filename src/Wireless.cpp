@@ -2,6 +2,13 @@
 #define REMOTE_DEBUG
 #define DEBUG_OUTPUT
 namespace ESPanel {
+// Helper to convert the hostname to lowercase
+void toLower(char *s) {
+  while (*s) {
+    *s = tolower((unsigned char)*s);
+    s++;
+  }
+}
 inline namespace Wireless {
 void wifiStart(const char *hostname, const char *ap_ssid, const char *ap_psk) {
   initFS();
@@ -93,6 +100,17 @@ void wifiStart(const char *hostname, const char *ap_ssid, const char *ap_psk) {
     Serial.print("IP address: ");
     Serial.println(WiFi.softAPIP());
 #endif // DEBUG_OUTPUT
+  }
+
+  // Enable mDNS server for local hostname resolution
+  char hostbuf[64];
+  strncpy(hostbuf, hostname, sizeof(hostbuf));
+  hostbuf[sizeof(hostbuf) - 1] = '\0';
+  toLower(hostbuf);
+  if (MDNS.begin(hostbuf)) {
+    Serial.print("mDNS started for ");
+    Serial.print(hostbuf);
+    Serial.println(".local");
   }
 }
 } // namespace Wireless

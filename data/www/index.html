@@ -87,16 +87,15 @@
                     <span id="humidity"><progress /></span>
                 </article>
             </section>
-            <section>
+            <section id="occupancySection">
                 <h3>Occupancy</h3>
-                <progress />
+                <progress id="occupancyLoading" />
             </section>
         </section>
 
         <!-- WiFi Credentials Form -->
         <section>
             <h2><a id="wifi"></a>Update WiFi Credentials</h2>
-
             <form id="wifiForm">
                 <article>
                     <fieldset>
@@ -120,35 +119,30 @@
 
         <!-- Status Message Area -->
         <section>
-            <div id="statusMessage" class="card" style="display: none;">
+            <article id="statusMessage" style="display: none;">
+                <header>
+                    Status Message
+                </header>
                 <p id="statusText"></p>
-            </div>
+            </article>
         </section>
     </main>
 
-    <!-- Materialize JavaScript -->
     <script>
-        function getTheme() {
-            const isDarkModeEnabledViaCss = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const currentTheme = localStorage.getItem('theme');
-            const isDark = currentTheme ? currentTheme === 'dark' : isDarkModeEnabledViaCss;
-            return isDark;
-        }
-        function setTheme(enableDark) {
-            document.documentElement.setAttribute('theme', enableDark ? 'dark' : 'light');
-            localStorage.setItem('theme', enableDark ? 'dark' : 'light');
-        }
-        const currentState = getTheme();
-        setTheme(currentState);
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/@materializecss/materialize@2.2.2/dist/js/materialize.min.js"></script>
-    <script>
-        // Sample data for demonstration - in a real implementation, this would come from your ESP device
         document.addEventListener('DOMContentLoaded', () => {
-            // Initialize Materialize components
-            if (typeof M !== "undefined") { M.AutoInit() };
-            // Simulate updating sensor data (in real implementation, fetch from ESP)
-            function updateSensorData() {
+            const occupancySection = document.getElementById('occupancySection');
+            const occupancyLoading = document.getElementById('occupancyLoading');
+
+            // Handle WiFi form submission
+            document.getElementById('wifiForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const ssid = document.getElementById('ssid').value;
+                const password = document.getElementById('password').value;
+                updateWiFi(ssid, password);
+            });
+
+            // Update climate sensor data
+            function updateClimateData() {
                 // Get the sensor and climate data.
                 fetch("climate.json").then((res) => {
                     res.json().then((climate) => {
@@ -158,27 +152,32 @@
                 });
             }
 
-            // Update sensor data periodically
-            setInterval(updateSensorData, 5000);
+            // Get the occupancy sensors
+            function updateOccupancyData() {
+                fetch("sensors.json").then((res) => {
+                    res.json().then((sensors) => {
+                        for (const sensorName in sensors.digital) {
+                            if (!Object.hasOwn(sensors.digital, sensorName)) continue;
+                            const state = sensors.digital[sensorName];
+                            createOrUpdateCard(sensorName, state);
+                        }
+                        occupancyLoading.style.display = 'none';
+                    });
+                });
+            }
 
-            // Handle WiFi form submission
-            document.getElementById('wifiForm').addEventListener('submit', function (e) {
-                e.preventDefault();
-
-                const ssid = document.getElementById('ssid').value;
-                const password = document.getElementById('password').value;
-
-                // Show loading state
-                const submitBtn = this.querySelector('button[type="submit"]');
-                const originalText = submitBtn.innerHTML;
-                submitBtn.innerHTML = 'Updating...';
-                submitBtn.disabled = true;
-
-                // In a real implementation, you would send this data to your ESP device
+            // Updates the stored WiFi configuration.
+            function updateWiFi(ssid, password) {
                 fetch('/update_wifi', { method: 'POST', body: JSON.stringify({ ssid, password }) }).then((res) => {
                     // Show success message
                     const statusDiv = document.getElementById('statusMessage');
                     const statusText = document.getElementById('statusText');
+
+                    // Show loading state
+                    const submitBtn = this.querySelector('input[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = 'Updating...';
+                    submitBtn.disabled = true;
 
                     statusText.innerHTML = 'WiFi credentials updated successfully! Device will reconnect shortly.';
                     statusDiv.className = 'card-panel green lighten-5 green-text';
@@ -198,7 +197,45 @@
 
                     console.log('WiFi credentials submitted:', { ssid, password });
                 });
-            });
+            }
+
+            // Add or update a dom element for provided sensor
+            function createOrUpdateCard(sensorName, state) {
+                // Check if the element exists already
+                const sensorId = `sensor-${sensorName}`;
+                const valueId = `value-${sensorName}`;
+                const sensorArticle = document.getElementById(sensorId);
+                if (sensorArticle) {
+                    document.getElementById(valueId).checked = state;
+                } else {
+                    const article = document.createElement('article');
+                    article.setAttribute('id', sensorId);
+                    const header = document.createElement('header');
+                    const value = document.createElement('input');
+                    value.setAttribute('id', valueId);
+                    header.innerHTML = titleCase(sensorName);
+                    value.name = sensorName;
+                    value.type = 'checkbox';
+                    value.role = 'switch';
+                    value.checked = state;
+                    article.appendChild(header);
+                    article.appendChild(value);
+                    occupancySection.appendChild(article);
+                }
+            }
+
+            // Title case string
+            function titleCase(s) {
+                return s.toLowerCase()
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+            }
+
+            setInterval(updateClimateData, 10000);
+            setInterval(updateOccupancyData, 5000);
+            updateClimateData();
+            updateOccupancyData();
         });
     </script>
 </body>
