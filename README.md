@@ -1,6 +1,6 @@
 # ESPanel
 
-Experimental alarm panel integration firmware for the ESP8266 microcontroller.
+Alarm panel integration firmware for the ESP8266 microcontroller.
 
 Replaces a "old school" home alarm system, publishing inputs (motion, door, switches) to Home Assistant and MQTT. Allowing for the repurposing of existing home sensors.
 
