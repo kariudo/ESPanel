@@ -185,30 +185,28 @@ void loop() {
     char buff[10];
     float humidity = dht.getHumidity();
     float temperature = dht.getTemperature();
-    // TODO: Disabled ifelse block for testing since the sensor does not exist
-    // if (std::isnan(humidity) || std::isnan(temperature)) {
+    if (std::isnan(humidity) || std::isnan(temperature)) {
 #ifdef DEBUG_OUTPUT
-    //      Serial.println("Unable to get readings from DHT22, skipping
-    //      submission.");
-    humidity = 99.0;
-    temperature = 99.0;
+      Serial.println("Unable to get readings from DHT22, skipping submission.");
+      humidity = 99.0;
+      temperature = 99.0;
 #endif
-    // at the moment } else {
-    dtostrf(dht.toFahrenheit(temperature), 2, 2, buff);
-    doc.clear();
-    doc["temp"] = buff;
-    mqttClient.publish(TEMPERATURE_TOPIC, buff, true);
-    dtostrf(humidity, 2, 2, buff);
-    doc["humidity"] = buff;
-    mqttClient.publish(HUMIDITY_TOPIC, buff, true);
-    previousTime = currentMillis;
+    } else {
+      dtostrf(dht.toFahrenheit(temperature), 2, 2, buff);
+      doc.clear();
+      doc["temp"] = buff;
+      mqttClient.publish(TEMPERATURE_TOPIC, buff, true);
+      dtostrf(humidity, 2, 2, buff);
+      doc["humidity"] = buff;
+      mqttClient.publish(HUMIDITY_TOPIC, buff, true);
+      previousTime = currentMillis;
 
-    // Write the JSON data.
-    File climateFile = LittleFS.open("climate.json", "w");
-    ArduinoJson::serializeJson(doc, climateFile);
-    climateFile.close();
-    doc.clear();
-    // }
+      // Write the JSON data.
+      File climateFile = LittleFS.open("climate.json", "w");
+      ArduinoJson::serializeJson(doc, climateFile);
+      climateFile.close();
+      doc.clear();
+    }
   }
 
 #ifdef REMOTE_DEBUG
