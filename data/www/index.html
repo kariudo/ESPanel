@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESPanel - Sensor Dashboard</title>
+
+    <!-- Pico CSS -->
+    <!-- Centered viewport -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.min.css">
+    <style>
+        .title {
+            font-size: 1.6em;
+        }
+
+        .icon {
+            display: inline;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background-color: #4CAF50;
+        }
+
+        .status-offline {
+            background-color: #f44336;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li class="title">
+                    <div class="icon"><svg height=24px viewBox="0 0 24 24" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M8 3V6.18257M3 8H6.18257M3 12H6M3 16H6.18257M17.8174 8H21M18 12H21M17.8174 16H21M8 17.8174L8 21M12 3V6M12 18V21M16 3L16 6.18257M16 17.8174V21M10 14H10.01M14 14H14.01M14 10H14.01M10 10H10.01M10.8 18H13.2C14.8802 18 15.7202 18 16.362 17.673C16.9265 17.3854 17.3854 16.9265 17.673 16.362C18 15.7202 18 14.8802 18 13.2V10.8C18 9.11984 18 8.27976 17.673 7.63803C17.3854 7.07354 16.9265 6.6146 16.362 6.32698C15.7202 6 14.8802 6 13.2 6H10.8C9.11984 6 8.27976 6 7.63803 6.32698C7.07354 6.6146 6.6146 7.07354 6.32698 7.63803C6 8.27976 6 9.11984 6 10.8V13.2C6 14.8802 6 15.7202 6.32698 16.362C6.6146 16.9265 7.07354 17.3854 7.63803 17.673C8.27976 18 9.11984 18 10.8 18Z"
+                                stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg></div>
+                    <strong>ESPanel</strong>
+                </li>
+            </ul>
+            <ul>
+                <li><a href="#status">Status</a></li>
+                <li><a href="#sensors">Sensors</a></li>
+                <li>
+                    <a href="#wifi">WiFi</a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- System Status Card -->
+        <section>
+            <h2><a id="status"></a>Status</h2>
+            <article>
+                <header>System </header>
+                <span class="status-indicator status-online"></span>
+                <span class="sensor-value">Online</span>
+            </article>
+        </section>
+
+        <section>
+            <h2><a id="sensors"></a>Sensors</h2>
+            <section>
+                <h3>Climate</h3>
+                <!-- Temperature Card -->
+                <article>
+                    <header>Temperature</header>
+                    <span id="temperature"><progress /></span>
+                </article>
+
+                <!-- Humidity Card -->
+                <article>
+                    <header>Humidity</header>
+                    <span id="humidity"><progress /></span>
+                </article>
+            </section>
+            <section id="occupancySection">
+                <h3>Occupancy</h3>
+                <progress id="occupancyLoading" />
+            </section>
+        </section>
+
+        <!-- WiFi Credentials Form -->
+        <section>
+            <h2><a id="wifi"></a>Update WiFi Credentials</h2>
+            <form id="wifiForm">
+                <article>
+                    <fieldset>
+                        <label for="ssid">Network Name (SSID)
+                            <input type="text" id="ssid" name="ssid" required
+                                placeholder="Enter a 2.4Ghz wifi network name">
+                        </label>
+                        <label for="password">
+                            Password
+                            <input type="password" id="password" name="password" required
+                                placeholder="Enter the network's password">
+                        </label>
+                    </fieldset>
+                    <div class="card-buttons">
+                        <input type="submit" value="Update WiFi Settings" />
+                        <input type="reset" value="Clear" />
+                    </div>
+                </article>
+            </form>
+        </section>
+
+        <!-- Status Message Area -->
+        <section>
+            <article id="statusMessage" style="display: none;">
+                <header>
+                    Status Message
+                </header>
+                <p id="statusText"></p>
+            </article>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const occupancySection = document.getElementById('occupancySection');
+            const occupancyLoading = document.getElementById('occupancyLoading');
+
+            // Handle WiFi form submission
+            document.getElementById('wifiForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const ssid = document.getElementById('ssid').value;
+                const password = document.getElementById('password').value;
+                updateWiFi(ssid, password);
+            });
+
+            // Update climate sensor data
+            function updateClimateData() {
+                // Get the sensor and climate data.
+                fetch("climate.json").then((res) => {
+                    res.json().then((climate) => {
+                        document.getElementById('temperature').textContent = climate.temp + '°F';
+                        document.getElementById('humidity').textContent = climate.humidity + '%';
+                    });
+                });
+            }
+
+            // Get the occupancy sensors
+            function updateOccupancyData() {
+                fetch("sensors.json").then((res) => {
+                    res.json().then((sensors) => {
+                        for (const sensorName in sensors.digital) {
+                            if (!Object.hasOwn(sensors.digital, sensorName)) continue;
+                            const state = sensors.digital[sensorName];
+                            createOrUpdateCard(sensorName, state);
+                        }
+                        occupancyLoading.style.display = 'none';
+                    });
+                });
+            }
+
+            // Updates the stored WiFi configuration.
+            function updateWiFi(ssid, password) {
+                fetch('/update_wifi', { method: 'POST', body: JSON.stringify({ ssid, password }) }).then((res) => {
+                    // Show success message
+                    const statusDiv = document.getElementById('statusMessage');
+                    const statusText = document.getElementById('statusText');
+
+                    // Show loading state
+                    const submitBtn = this.querySelector('input[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = 'Updating...';
+                    submitBtn.disabled = true;
+
+                    statusText.innerHTML = 'WiFi credentials updated successfully! Device will reconnect shortly.';
+                    statusDiv.className = 'card-panel green lighten-5 green-text';
+                    statusDiv.classList.remove('hide');
+
+                    // Reset form
+                    document.getElementById('wifiForm').reset();
+
+                    // Restore button
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+
+                    // Hide message after 5 seconds
+                    setTimeout(() => {
+                        statusDiv.classList.add('hide');
+                    }, 5000);
+
+                    console.log('WiFi credentials submitted:', { ssid, password });
+                });
+            }
+
+            // Add or update a dom element for provided sensor
+            function createOrUpdateCard(sensorName, state) {
+                // Check if the element exists already
+                const sensorId = `sensor-${sensorName}`;
+                const valueId = `value-${sensorName}`;
+                const sensorArticle = document.getElementById(sensorId);
+                if (sensorArticle) {
+                    document.getElementById(valueId).checked = state;
+                } else {
+                    const article = document.createElement('article');
+                    article.setAttribute('id', sensorId);
+                    const header = document.createElement('header');
+                    const value = document.createElement('input');
+                    value.setAttribute('id', valueId);
+                    header.innerHTML = titleCase(sensorName);
+                    value.name = sensorName;
+                    value.type = 'checkbox';
+                    value.role = 'switch';
+                    value.checked = state;
+                    article.appendChild(header);
+                    article.appendChild(value);
+                    occupancySection.appendChild(article);
+                }
+            }
+
+            // Title case string
+            function titleCase(s) {
+                return s.toLowerCase()
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+            }
+
+            setInterval(updateClimateData, 10000);
+            setInterval(updateOccupancyData, 5000);
+            updateClimateData();
+            updateOccupancyData();
+        });
+    </script>
+</body>
+
+</html>

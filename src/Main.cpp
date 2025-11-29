@@ -1,27 +1,35 @@
-#include <Arduino.h>
+// CONFIGURATION ============
+#ifndef POLLING_SPEED
+#define POLLING_SPEED 1000 // check sensors every second
+#endif
 
-#include "PubSubClient.h"
-#include "Wireless.h"
+#include <Arduino.h>
+#include <ESP8266mDNS.h>
+
+#include "DHTesp.h"
 #include "LED.h"
 #include "Main.h"
+#include "PubSubClient.h"
 #include "Sensors.h"
-#include "DHTesp.h"
+#include "WebServer.h"
+#include "Wireless.h"
 
-// CONFIGURATION ============
+#include <ArduinoJson.h>
 
-#define POLLING_SPEED 1000 // check sensors every second
-#define REMOTE_DEBUG
-#define DEBUG_OUTPUT
-//#define BLINK_READS
-//#define READ_ALL_PINS
+// #define BLINK_READS
+// #define READ_ALL_PINS
 
 #ifdef REMOTE_DEBUG
 #include "RemoteDebug.h"
 RemoteDebug Debug;
 #endif // REMOTE_DEBUG
 
-#define HOSTNAME "ESPanel"
+#define HOSTNAME STR_VALUE(CONFIG_HOSTNAME)
+#ifdef DEV_TEST
+#define BASE_TOPIC "test-sensors/" HOSTNAME
+#else
 #define BASE_TOPIC "sensors/" HOSTNAME
+#endif
 #define WILL_TOPIC BASE_TOPIC "/connected"
 #define MQTT_QOS 1
 
@@ -44,32 +52,40 @@ PubSubClient mqttClient(espClient);
 DHTesp dht;
 
 const int inputPins[] = {
-    //16, //wake, wants to be low so this wont work to pulldown
-    14, //HSPICLK
-    12, //HSPIQ
-    13, //HSPID & RXD2
-    //  1,  //TXD0 (break serial) Couldn't make this one work even with serial not enabled
-    3, //RXD0 (break serial)
+    // 16, //wake, wants to be low so this wont work to pulldown
+    14, // HSPICLK
+    12, // HSPIQ
+    13, // HSPID & RXD2
+    //  1,  //TXD0 (break serial) Couldn't make this one work even with serial
+    //  not enabled
+    3, // RXD0 (break serial)
     5,
     4,
     15, // TXD2 & HSPICS, must be low at boot
         // 2, // LED & D4, must be high at boot
         // 0 // flash mode, can't be low at boot
-};      //9, 10 are questionable, 1 and 3 also a maybe
+}; // 9, 10 are questionable, 1 and 3 also a maybe
 
 const int pinCount = sizeof(inputPins) / sizeof(int);
 
 // Configure up to 7 sensors, one for each pin max
 using namespace ESPanel::Sensors;
 
-#define SENSOR_COUNT 6 // WARNING!! WARNING!! UPDATE THIS IF CHANGING THE SENSOR COUNT
+#define SENSOR_COUNT                                                           \
+  6 // WARNING!! WARNING!! UPDATE THIS IF CHANGING THE SENSOR COUNT
 static Sensor *SensorList[] = {
     new MotionSensor(5, Location::FrontHall), // Front room motion
     new DoorSensor(12, Location::FrontHall),  // Front door
     new DoorSensor(14, Location::Patio),      // Patio door
-    new DoorSensor(4, Location::BackHall),  // Back Hall, needed a 220ohm resistor inline to compensate for some terminating resistor down the line
+    new DoorSensor(4,
+                   Location::BackHall), // Back Hall, needed a 220ohm resistor
+                                        // inline to compensate for some
+                                        // terminating resistor down the line
     new DoorSensor(13, Location::Basement), // Basement door
-    new SwitchSensor(3, Location::Basement), // Switch in basement - Last one that can be used reliably is 3, but it should break serial rx
+    new SwitchSensor(
+        3,
+        Location::Basement), // Switch in basement - Last one that can be used
+                             // reliably is 3, but it should break serial rx
 };
 
 // END CONFIGURATION ============
@@ -77,14 +93,16 @@ static Sensor *SensorList[] = {
 using namespace ESPanel::Setup;
 using namespace ESPanel::Wireless;
 using namespace ESPanel::LED;
+using namespace ESPanel::WebServer;
 
-void setup()
-{
+void setup() {
+  blink(1); // Fast blink to ensure LED is not left on.
+
   // Invert the state of the basement switch
   SensorList[5]->setInverted();
 
   // Enable the builtin led for blinking
-  pinMode(D4, OUTPUT); 
+  pinMode(D4, OUTPUT);
 
 #ifdef DEBUG_OUTPUT
   // Start Serial interface
@@ -114,52 +132,80 @@ void setup()
   // DHT22 configuration.
   dht.setup(D0, DHTesp::DHT22);
 
-  // BLINK!
-  blink(1000);
+// Start webserverWebServer
+#ifdef DEBUG_OUTPUT
+  Serial.println("Initialize webserver");
+#endif // DEBUG_OUTPUT
+  registerRoutes();
+
+// BLINK!
+#ifdef STATUS_BLINK
+  blink(100);
+#endif
 }
 
-
-void loop()
-{
+void loop() {
   // Handle OTA server.
   ArduinoOTA.handle();
 
+  // Create a JSON document.
+  JsonDocument doc;
   // Loop the sensors
-  //Serial.println("Checking for updated sensor states.");
-  for (int i = 0; i < SENSOR_COUNT; i++)
-  {
+  // Serial.println("Checking for updated sensor states.");
+  for (int i = 0; i < SENSOR_COUNT; i++) {
     if (SensorList[i]->updateState()) // If state changed
     {
       char topicBuf[50];
-      snprintf(topicBuf, 50, "%s/%s/%s", BASE_TOPIC, SensorList[i]->getLocation(), SensorList[i]->getType());
-      mqttClient.publish(topicBuf, SensorList[i]->getState() ? PAYLOAD_TRUE : PAYLOAD_FALSE, true); // publish retained states
+      snprintf(topicBuf, 50, "%s/%s/%s", BASE_TOPIC,
+               SensorList[i]->getLocation(), SensorList[i]->getType());
+      mqttClient.publish(
+          topicBuf, SensorList[i]->getState() ? PAYLOAD_TRUE : PAYLOAD_FALSE,
+          true); // publish retained states
     }
+    // Add each sensor state to the JSON document.
+    doc["digital"][String(SensorList[i]->getLocation()) + " " +
+                   String(SensorList[i]->getType())] =
+        SensorList[i]->getState();
   }
 
 #ifdef READ_ALL_PINS
   readAllPins();
 #endif // READ_ALL_PINS
 
+  // Write the JSON data.
+  File sensorsFile = LittleFS.open("sensors.json", "w");
+  ArduinoJson::serializeJson(doc, sensorsFile);
+  sensorsFile.close();
+
   // Evaluate the DHT22.
   static unsigned long previousTime = 0;
   static const int dhtInterval = 10000; // 10 seconds.
   unsigned long currentMillis = millis();
-  if (currentMillis - previousTime >= dhtInterval)
-  {
+  if (currentMillis - previousTime >= dhtInterval) {
     char buff[10];
     float humidity = dht.getHumidity();
     float temperature = dht.getTemperature();
-    if (std::isnan(humidity) || std::isnan(temperature))
-    {
-      #ifdef DEBUG_OUTPUT
+    if (std::isnan(humidity) || std::isnan(temperature)) {
+#ifdef DEBUG_OUTPUT
       Serial.println("Unable to get readings from DHT22, skipping submission.");
-      #endif
+      humidity = 99.0;
+      temperature = 99.0;
+#endif
     } else {
-      dtostrf(dht.toFahrenheit(temperature), 2,2,buff);
+      dtostrf(dht.toFahrenheit(temperature), 2, 2, buff);
+      doc.clear();
+      doc["temp"] = buff;
       mqttClient.publish(TEMPERATURE_TOPIC, buff, true);
-      dtostrf(humidity, 2,2,buff);
+      dtostrf(humidity, 2, 2, buff);
+      doc["humidity"] = buff;
       mqttClient.publish(HUMIDITY_TOPIC, buff, true);
       previousTime = currentMillis;
+
+      // Write the JSON data.
+      File climateFile = LittleFS.open("climate.json", "w");
+      ArduinoJson::serializeJson(doc, climateFile);
+      climateFile.close();
+      doc.clear();
     }
   }
 
@@ -167,8 +213,7 @@ void loop()
   Debug.handle();
 #endif
 
-  if (!mqttClient.connected())
-  {
+  if (!mqttClient.connected()) {
     reconnectMQTT();
   }
   mqttClient.loop();
@@ -177,23 +222,29 @@ void loop()
   rdebugVln(".");
 #endif
 
-  blink(int(POLLING_SPEED / 2)); // yield() if we don't delay, keep those esp juices flowing
+  // Must run each loop to keep mDNS processing.
+  MDNS.update();
+
+// BLINK!
+#ifdef STATUS_BLINK
+  blink(int(POLLING_SPEED /
+            2)); // yield() if we don't delay, keep those esp juices flowing
+#else
+  delay(POLLING_SPEED);
+#endif
 }
 
-namespace ESPanel
-{
-inline namespace Setup
-{
+namespace ESPanel {
+inline namespace Setup {
 
 // todo: move to a better namespace
-void reconnectMQTT()
-{
+void reconnectMQTT() {
   // while (!mqttClient.connected()) // looping here will get us stuck
   // {
   Serial.print("Attempting MQTT connection...");
   // Connect with a will messages
-  if (mqttClient.connect(HOSTNAME, MQTT_USER, MQTT_PASSWORD, WILL_TOPIC, MQTT_QOS, true, PAYLOAD_FALSE))
-  {
+  if (mqttClient.connect(HOSTNAME, MQTT_USER, MQTT_PASSWORD, WILL_TOPIC,
+                         MQTT_QOS, true, PAYLOAD_FALSE)) {
 #ifdef DEBUG_OUTPUT
     Serial.println("MQTT Connected");
     Serial.print("Posting connected to will topic ");
@@ -205,11 +256,11 @@ void reconnectMQTT()
 
     // notify connected
     mqttClient.publish(WILL_TOPIC, PAYLOAD_TRUE, true);
-  }
-  else
-  {
+  } else {
 #ifdef REMOTE_DEBUG
-    rdebugEln("Waiting 5 seconds, failed to connect to MQTT server (%s:%s@%s:%d). Failed.", MQTT_USER, MQTT_PASSWORD, MQTT_SERVER, MQTT_PORT);
+    rdebugEln("Waiting 5 seconds, failed to connect to MQTT server "
+              "(%s:%s@%s:%d). Failed.",
+              MQTT_USER, MQTT_PASSWORD, MQTT_SERVER, MQTT_PORT);
 #endif
 #ifdef DEBUG_OUTPUT
     Serial.print("failed, rc=");
@@ -222,15 +273,13 @@ void reconnectMQTT()
 }
 
 // todo: relocate to a better place
-void mqttCallback(char *topic, byte *payload, unsigned int length)
-{
-  // todo: handle any subscriptions (possibly to control config)
+void mqttCallback(char *topic, byte *payload, unsigned int length) {
+// todo: handle any subscriptions (possibly to control config)
 #ifdef DEBUG_OUTPUT
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
-  for (int i = 0; i < length; i++)
-  {
+  for (uint i = 0; i < length; i++) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
@@ -239,11 +288,9 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
 }
 
 #ifdef DEBUG_OUTPUT
-void startSerial()
-{
+void startSerial() {
   Serial.begin(9600);
-  while (!Serial)
-  {
+  while (!Serial) {
     delay(10); // wait for serial
   }
   Serial.println();
@@ -253,11 +300,9 @@ void startSerial()
 }
 #endif // DEBUG_OUTPUT
 
-void setPins()
-{
+void setPins() {
   int i;
-  for (i = 0; i < pinCount - 1; i++)
-  {
+  for (i = 0; i < pinCount - 1; i++) {
     pinMode(inputPins[i], INPUT_PULLUP);
 #ifdef DEBUG_OUTPUT
     Serial.print("Set pin ");
@@ -268,15 +313,13 @@ void setPins()
 }
 
 #ifdef READ_ALL_PINS
-void readAllPins()
-{
+void readAllPins() {
   int found;
   int readVal;
 
   // Read the pins
   found = 0;
-  for (int j = 0; j < pinCount - 1; j++)
-  {
+  for (int j = 0; j < pinCount - 1; j++) {
     readVal = digitalRead(inputPins[j]);
 
 #ifdef REMOTE_DEBUG
@@ -284,10 +327,8 @@ void readAllPins()
 #endif // REMOTE_DEBUG
 
 #ifdef DEBUG_OUTPUT
-    if (readVal == LOW)
-    {
-      if (found == 0)
-      {
+    if (readVal == LOW) {
+      if (found == 0) {
         Serial.println();
       }
       // redundant, logged by remote
@@ -295,8 +336,7 @@ void readAllPins()
       Serial.print(inputPins[j]);
       Serial.println(" is pulled LOW.");
 #ifdef BLINK_READS
-      for (int k = 0; k < inputPins[j] - 1; k++)
-      {
+      for (int k = 0; k < inputPins[j] - 1; k++) {
         blink(200);
       }
 #endif
@@ -306,10 +346,9 @@ void readAllPins()
       found++;
     }
 #endif // DEBUG_OUTPUT
-  }    // END pin loop
+  } // END pin loop
 #ifdef DEBUG_OUTPUT
-  if (found == 0)
-  {
+  if (found == 0) {
     Serial.print(".");
   }
 #endif

@@ -1,20 +1,15 @@
 #include "FileSystem.h"
 
-namespace ESPanel
-{
-inline namespace FileSystem
-{
-void initFS()
-{
+namespace ESPanel {
+inline namespace FileSystem {
+void initFS() {
   // Initialize file system.
-  if (!LittleFS.begin())
-  {
+  if (!LittleFS.begin()) {
 #ifdef DEBUG_OUTPUT
     Serial.println("Failed to mount file system");
 #endif // DEBUG_OUTPUT
     // blink 3 times for a failure warning, then restart
-    for (int i = 0; i < 2; i++)
-    {
+    for (int i = 0; i < 2; i++) {
       blink(1500);
     }
     ESP.restart();
@@ -30,12 +25,10 @@ void initFS()
    and the WiFi PSK in the second line.
    Line seperator can be \r\n (CR LF) \r or \n.
 */
-bool loadConfig(String *ssid, String *pass)
-{
+bool loadConfig(String *ssid, String *pass) {
   // open file for reading.
   File configFile = LittleFS.open("/cl_conf.txt", "r");
-  if (!configFile)
-  {
+  if (!configFile) {
     Serial.println("Failed to open cl_conf.txt.");
 
     return false;
@@ -51,19 +44,16 @@ bool loadConfig(String *ssid, String *pass)
   int8_t pos = content.indexOf("\r\n");
   uint8_t le = 2;
   // check for linux and mac line ending.
-  if (pos == -1)
-  {
+  if (pos == -1) {
     le = 1;
     pos = content.indexOf("\n");
-    if (pos == -1)
-    {
+    if (pos == -1) {
       pos = content.indexOf("\r");
     }
   }
 
   // If there is no second line: Some information is missing.
-  if (pos == -1)
-  {
+  if (pos == -1) {
     Serial.println("Invalid content.");
     Serial.println(content);
 
@@ -94,12 +84,10 @@ bool loadConfig(String *ssid, String *pass)
    @param pass PSK as string pointer,
    @return True or False.
 */
-bool saveConfig(String *ssid, String *pass)
-{
+bool saveConfig(String *ssid, String *pass) {
   // Open config file for writing.
   File configFile = LittleFS.open("/cl_conf.txt", "w");
-  if (!configFile)
-  {
+  if (!configFile) {
     Serial.println("Failed to open cl_conf.txt for writing");
 
     return false;
